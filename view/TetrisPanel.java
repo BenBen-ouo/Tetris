@@ -15,6 +15,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private int flag = 0;
     private final Image b1;
     private final Image b2;
+    private Timer timer;
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -91,14 +92,23 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
         Timer timer = new Timer(1000, new TimerListener());
         timer.start(); // 啟動計時器
+        timer = new Timer(1000, new TimerListener());
     }
 
-    public void newBlock() {
+    
+    
+    public void startTimer() {
+        timer.start();
+    }
+
+    public void newBlock() {// 產生新方塊
         flag = 0;
         blockType = next;
         change = 1;
-        next = (int)(Math.random()*7);
-        turnState = 0;
+
+        next = (int)(Math.random()*7);// 下一個方塊類型要改邏輯!
+        
+        turnState = 0;// 初始旋轉狀態
         x = 4; y = 0;
         if(gameOver(x, y) == 1) {
             initMap();
@@ -106,7 +116,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         repaint();
     }
 
-    public void setBlock(int x, int y, int type, int state) {
+    public void setBlock(int x, int y, int type, int state) {// 固定方塊到地圖上
         flag = 1;
         for(int i = 0; i < 16; i++) {
             if(shapes[type][state][i] == 1) {
@@ -115,7 +125,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         }
     }
 
-    public int gameOver(int x, int y) {
+    public int gameOver(int x, int y) {// 判斷遊戲是否結束
         if(blow(x, y, blockType, turnState) == 0)
             return 1;
         return 0;
