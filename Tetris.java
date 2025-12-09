@@ -4,12 +4,11 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import javax.swing.*;
-import javax.swing.Timer;
 
 public class Tetris extends JFrame {
     public final int WIDTH = 700, HEIGHT = 800;
     public Tetris() {
-        this.setTitle("Tetris Test");
+        this.setTitle("Tetris");
         this.setSize(WIDTH, HEIGHT);
         this.setLayout(null);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
