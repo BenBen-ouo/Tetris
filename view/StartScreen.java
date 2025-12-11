@@ -2,8 +2,6 @@ package view;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class StartScreen extends JPanel {
     private Tetris parentFrame;
@@ -12,17 +10,30 @@ public class StartScreen extends JPanel {
         this.parentFrame = frame;
 
         this.setLayout(new GridBagLayout());
-        this.setBackground(Color.DARK_GRAY);
+        this.setBackground(Color.BLACK);
 
         JLabel titleLabel = new JLabel("TETRIS GAME");
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 70));
+        titleLabel.setFont(new Font("SansSerif", Font.CENTER_BASELINE, 70));
         titleLabel.setForeground(Color.WHITE);
 
         JButton startButton = new JButton("START GAME");
         startButton.setFont(new Font("SansSerif", Font.BOLD, 30));
         startButton.setPreferredSize(new Dimension(300, 80));
-
         startButton.addActionListener(e -> parentFrame.startGame());
+        
+        startButton.setFocusPainted(false);
+        startButton.setOpaque(true); // 確保背景顏色能顯示
+        startButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                startButton.setBackground(Color.DARK_GRAY); // 滑鼠進入時變色
+                startButton.setForeground(Color.WHITE);
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                startButton.setBackground(UIManager.getColor("Button.background")); // 滑鼠離開時變回原色
+                startButton.setForeground(Color.BLACK);
+            }
+        });
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;

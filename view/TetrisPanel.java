@@ -95,10 +95,10 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         timer = new Timer(1000, new TimerListener());
     }
 
-    
-    
     public void startTimer() {
-        timer.start();
+        if(timer != null) {
+            timer.start();
+        }
     }
 
     public void newBlock() {// 產生新方塊
