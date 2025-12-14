@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import javax.swing.*;
+import model.Tetromino;
 
 public final class TetrisPanel extends JPanel implements KeyListener { //面板邏輯
     public int[][] map = new int [10][20]; // 10寬 20高 
@@ -18,44 +19,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
-    // 方塊形狀陣列要改
-    public final int shapes[][][] = new int[][][] {
-            // I
-            { { 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0 },
-                    { 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0 } },
-            // S
-            { { 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-                    { 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 } },
-            // Z
-            { { 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 } },
-            // J
-            { { 0, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 },
-                    { 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
-            // O
-            { { 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
-            // L
-            { { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-                    { 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
-            // T
-            { { 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-                    { 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-                    { 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 } }
-    };
 
     public TetrisPanel() {
         this.setLayout(null);
@@ -109,9 +72,15 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     public void setBlock(int x, int y, int type, int state) {
         flag = 1;
         for(int i = 0; i < 16; i++) {
-            if(shapes[type][state][i] == 1) {
-                map[x+i%4][y+i/4] = type+1;
-            }
+            //原版寫法
+            // if(shape[type][state][i] == 1) {
+            //     map[x+i%4][y+i/4] = type+1;
+            // }
+            //新版寫法
+            int[] rotation = Tetromino.values()[type].rotation(state);
+            if (rotation[i] == 1) {
+                map[x + i % 4][y + i / 4] = type + 1;
+                }
         }
     }
 
@@ -123,10 +92,19 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
     public int blow(int x, int y, int type, int state) {
         for(int i = 0; i < 16; i++) {
-            if(shapes[type][state][i] == 1) {
-                if(x+i%4 >= 10 || y+i/4 >= 20 || x+i%4 < 0 || y+i/4 < 0)
+            //原版寫法
+            // if(shapes[type][state][i] == 1) {
+            //     if(x+i%4 >= 10 || y+i/4 >= 20 || x+i%4 < 0 || y+i/4 < 0)
+            //         return 0;
+            //     if(map[x+i%4][y+i/4] != 0)
+            //         return 0;
+            // }
+            //新版寫法
+            int[] rotation = Tetromino.values()[type].rotation(state);
+            if (rotation[i] == 1) {
+                if (x + i % 4 >= 10 || y + i / 4 >= 20 || x + i % 4 < 0 || y + i / 4 < 0)
                     return 0;
-                if(map[x+i%4][y+i/4] != 0)
+                if (map[x + i % 4][y + i / 4] != 0)
                     return 0;
             }
         }
@@ -167,7 +145,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         }
         repaint();
         if (blow(x, y + 1, blockType, turnState) == 0) {
-            //Sleep(500); ///目前不確定功能
+            //Sleep(500); ///目前不確定功能先保留
             setBlock(x, y, blockType, turnState);
             newBlock();
             delLine();
@@ -197,7 +175,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         }   
         /*if(access == 1)
             Sleep(500);*/
-            ///目前不確定功能
+            ///目前不確定功能先保留
     }
 
     void initMap() {
@@ -207,36 +185,39 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     }
 
     @Override
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
+    public void paintComponent(Graphics graphics) {
+        super.paintComponent(graphics);
         for(int i = 0; i < 10; i++) {
             for(int j = 0; j < 20; j++) {
                 if(map[i][j] == 0) {
                     if((i+j)%2 == 0)
-                        g.drawImage(b1, i*30+3*(i+1)+150, j*30+3*(j+1), null);
+                        graphics.drawImage(b1, i*30+3*(i+1)+150, j*30+3*(j+1), null);
                     else
-                        g.drawImage(b2, i*30+3*(i+1)+150, j*30+3*(j+1), null);
+                        graphics.drawImage(b2, i*30+3*(i+1)+150, j*30+3*(j+1), null);
                 } else
-                    g.drawImage(color[map[i][j]-1], i*30+3*(i+1)+150, j*30+3*(j+1), null);
+                    graphics.drawImage(color[map[i][j]-1], i*30+3*(i+1)+150, j*30+3*(j+1), null);
             }
         }
         if(flag == 0) {
             for (int i = 0; i < 16; i++) {
-                if (shapes[blockType][turnState][i] == 1) {
-                    g.drawImage(color[blockType], (i%4+x)*33+3+150, (i/4+y)*33+3, null);
+                int[] rotation = Tetromino.values()[blockType].rotation(turnState);
+                if (rotation[i] == 1) {
+                    graphics.drawImage(color[blockType], (i%4 + x)*33 + 3 + 150, (i/4 + y)*33 + 3, null);
                 }
             }
         }
         if(hold >= 0) {
             for (int i = 0; i < 16; i++) {
-                if (shapes[hold][0][i] == 1) {
-                    g.drawImage(color[hold], (i%4)*33+3, (i/4)*33+3+80, null);
+                int[] holdRot = Tetromino.values()[hold].rotation(0);
+                if (holdRot[i] == 1) {
+                    graphics.drawImage(color[hold], (i%4)*33 + 3, (i/4)*33 + 3 + 80, null);
                 }
             }
         }
         for (int i = 0; i < 16; i++) {
-            if (shapes[next][0][i] == 1) {
-                g.drawImage(color[next], (i%4)*33+530, (i/4)*33+3+80, null);
+            int[] nextRot = Tetromino.values()[next].rotation(0);
+            if (nextRot[i] == 1) {
+                graphics.drawImage(color[next], (i%4)*33 + 530, (i/4)*33 + 3 + 80, null);
             }
         }
     }
