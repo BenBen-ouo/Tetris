@@ -3,7 +3,7 @@ package view;
 import javax.swing.*;
 
 public class Tetris extends JFrame {
-    public final int WIDTH = 700, HEIGHT = 800;
+    public final int WIDTH = 700, HEIGHT = 750;
     private StartScreen startScreen;
     private TetrisPanel gamePanel;
 
