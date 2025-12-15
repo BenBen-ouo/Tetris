@@ -1,19 +1,24 @@
 package view;
 
+import controller.GameController;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import javax.swing.*;
+import model.Board;
 import model.Tetromino;
 
 public final class TetrisPanel extends JPanel implements KeyListener { //面板邏輯
-    public int[][] map = new int [10][20]; // 10寬 20高 
-    private int blockType; // 0~6 代表7種方塊
-    private int turnState; // 0~3 代表方塊的4種旋轉狀態
-    private int x, y, hold, next, change; //x,y為方塊位置，hold為暫存方塊，next為下一個方塊，change為是否能換
-    private int flag = 0;
+    public int[][] map = new int [10][20]; // 10寬 20高（初始化後會指向 Board 的 map）
+    private Board board; // 盤面資料來源
+    // 轉為由 GameController 管理狀態
+    private GameController controller;
+    private int blockType; // 暫存繪製使用（由 controller 取得）
+    private int turnState; // 暫存繪製使用（由 controller 取得）
+    private int x, y, hold, next, change; // 暫存繪製與既有流程（將逐步收斂到 controller）
+    private int flag = 0; // 與舊程式相容（由 controller 提供）
     private final Image b1;
     private final Image b2;
     private Timer timer;
@@ -47,15 +52,18 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         HOLD.setForeground(Color.white);
         add(HOLD);
 
+        // 初始化 Board 與 map
+        board = new Board();
+        map = board.getMap();
+        controller = new GameController(board);
         initMap(); // 初始化地圖
-        newBlock(); // 產生新方塊
-        hold = -1; // 初始暫存方塊為空
+        // 由控制器初始化新方塊
+        newBlock();
+        hold = controller.getHold();
+        next = controller.getNext();
 
-        next = (int)(Math.random()*7); // 下一個方塊類型要改邏輯
-
-        Timer timer = new Timer(1000, new TimerListener());
-        timer.start(); // 啟動計時器
-        timer = new Timer(1000, new TimerListener());
+        // 僅建立計時器，不在這裡啟動，避免主畫面時偷跑
+        this.timer = new Timer(1000, new TimerListener());
     }
 
     public void startTimer() {
@@ -65,33 +73,14 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     }
 
     public void newBlock() {// 產生新方塊
-        flag = 0;
-        blockType = next;
-        change = 1;
-
-        next = (int)(Math.random()*7);// 下一個方塊類型要改邏輯!
-        
-        turnState = 0;// 初始旋轉狀態
-        x = 4; y = 0;
-        if(gameOver(x, y) == 1) {
-            initMap();
-        }
+        controller.newBlock();
+        syncStateFromController();
         repaint();
     }
 
     public void setBlock(int x, int y, int type, int state) {// 固定方塊到地圖上
         flag = 1;
-        for(int i = 0; i < 16; i++) {
-            //原版寫法
-            // if(shape[type][state][i] == 1) {
-            //     map[x+i%4][y+i/4] = type+1;
-            // }
-            //新版寫法
-            int[] rotation = Tetromino.values()[type].rotation(state);
-            if (rotation[i] == 1) {
-                map[x + i % 4][y + i / 4] = type + 1;
-                }
-        }
+        GameController.setBlock(board, x, y, type, state);
     }
 
     public int gameOver(int x, int y) {// 判斷遊戲是否結束
@@ -101,97 +90,44 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     }
 
     public int blow(int x, int y, int type, int state) {
-        for(int i = 0; i < 16; i++) {
-            //原版寫法
-            // if(shapes[type][state][i] == 1) {
-            //     if(x+i%4 >= 10 || y+i/4 >= 20 || x+i%4 < 0 || y+i/4 < 0)
-            //         return 0;
-            //     if(map[x+i%4][y+i/4] != 0)
-            //         return 0;
-            // }
-            //新版寫法
-            int[] rotation = Tetromino.values()[type].rotation(state);
-            if (rotation[i] == 1) {
-                if (x + i % 4 >= 10 || y + i / 4 >= 20 || x + i % 4 < 0 || y + i / 4 < 0)
-                    return 0;
-                if (map[x + i % 4][y + i / 4] != 0)
-                    return 0;
-            }
-        }
-        return 1;
+        return GameController.canPlace(board, x, y, type, state);
     }
 
     public void rotate() {
-        int tmpState = turnState;
-        tmpState = (tmpState+1)%4;
-        if(blow(x, y, blockType, tmpState) == 1) {
-            turnState = tmpState;
-        }
+        controller.rotate();
+        syncStateFromController();
         repaint();
     }
 
     public int r_shift() {
-        int canShift = 0;
-        if(blow(x+1, y, blockType, turnState) == 1) {
-            x++;
-            canShift = 1;
-        }
+        int moved = controller.r_shift();
+        syncStateFromController();
         repaint();
-        return canShift;
+        return moved;
     }
 
     public void l_shift() {
-        if(blow(x - 1, y, blockType, turnState) == 1) {
-            x--;
-        }
+        controller.l_shift();
+        syncStateFromController();
         repaint();
     }
 
     public int down_shift() {
-        int canDown = 0;
-        if (blow(x, y + 1, blockType, turnState) == 1) {
-            y++;
-            canDown = 1;
-        }
+        int canDown = controller.down_shift();
+        // 若剛固定並產生新方塊，控制器已處理清行與 newBlock
+        syncStateFromController();
         repaint();
-        if (blow(x, y + 1, blockType, turnState) == 0) {
-            //Sleep(500); ///目前不確定功能先保留
-            setBlock(x, y, blockType, turnState);
-            newBlock();
-            delLine();
-            canDown = 0;
-        }
         return canDown;
     }
 
     void delLine() {
-        int idx = 19;
-        for(int i = 19; i >= 0; i--) {
-            int cnt = 0;
-            for(int j = 0; j < 10; j++) {
-                if(map[j][i] != 0)
-                    cnt++;
-            }
-            if(cnt == 10) {
-                for(int j = 0; j < 10; j++) {
-                    map[j][i] = 0;
-                }
-            } else {
-                for(int j = 0; j < 10; j++) {
-                    map[j][idx] = map[j][i];
-                }
-                idx--;
-            }
-        }   
-        /*if(access == 1)
-            Sleep(500);*/
-            ///目前不確定功能先保留
+        GameController.clearFullLines(board);
+        // /*if(access == 1) Sleep(500);*/ 保留暫不實作
     }
 
     void initMap() {
-        for(int i = 0; i < 10; i++)
-            for(int j = 0; j < 20; j++)
-                map[i][j] = 0;
+        board.initMap();
+        map = board.getMap();
     }
 
     @Override
@@ -208,6 +144,15 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     graphics.drawImage(color[map[i][j]-1], i*30+3*(i+1)+150, j*30+3*(j+1), null);
             }
         }
+        // 從控制器讀取目前方塊狀態
+        blockType = controller.getBlockType();
+        turnState = controller.getTurnState();
+        x = controller.getX();
+        y = controller.getY();
+        flag = controller.getFlag();
+        next = controller.getNext();
+        hold = controller.getHold();
+
         if(flag == 0) {
             for (int i = 0; i < 16; i++) {
                 int[] rotation = Tetromino.values()[blockType].rotation(turnState);
@@ -230,6 +175,17 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                 graphics.drawImage(color[next], (i%4)*33 + 530, (i/4)*33 + 3 + 80, null);
             }
         }
+    }
+
+    // 與控制器同步狀態（供繪製與既有流程使用）
+    private void syncStateFromController() {
+        blockType = controller.getBlockType();
+        turnState = controller.getTurnState();
+        x = controller.getX();
+        y = controller.getY();
+        flag = controller.getFlag();
+        next = controller.getNext();
+        hold = controller.getHold();
     }
 
     @Override
