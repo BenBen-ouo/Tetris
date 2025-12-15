@@ -2,8 +2,6 @@ package view;
 
 import controller.GameController;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import javax.swing.*;
@@ -14,14 +12,14 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     public int[][] map = new int [10][20]; // 10寬 20高（初始化後會指向 Board 的 map）
     private Board board; // 盤面資料來源
     // 轉為由 GameController 管理狀態
-    private GameController controller;
+    private final GameController controller;
     private int blockType; // 暫存繪製使用（由 controller 取得）
     private int turnState; // 暫存繪製使用（由 controller 取得）
-    private int x, y, hold, next, change; // 暫存繪製與既有流程（將逐步收斂到 controller）
+    private int x, y, hold, next; // 暫存繪製（由 controller 取得）
     private int flag = 0; // 與舊程式相容（由 controller 提供）
     private final Image b1;
     private final Image b2;
-    private Timer timer;
+    // Timer 交由外部（Tetris/TimerService）管理
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -62,14 +60,14 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         hold = controller.getHold();
         next = controller.getNext();
 
-        // 僅建立計時器，不在這裡啟動，避免主畫面時偷跑
-        this.timer = new Timer(1000, new TimerListener());
+        // 計時器不在面板內管理，由外部 TimerService 呼叫 tick()
     }
 
-    public void startTimer() {
-        if(timer != null) {
-            timer.start();
-        }
+    // 外部計時器呼叫本方法以驅動遊戲邏輯
+    public void tick() {
+        controller.tick();
+        syncStateFromController();
+        repaint();
     }
 
     public void newBlock() {// 產生新方塊
@@ -213,18 +211,9 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             while(down_shift() == 1);
             break;
         case KeyEvent.VK_SHIFT:
-            if(hold >= 0 && change == 1) {
-                int tmp;
-                tmp = hold;
-                hold = blockType;
-                blockType = tmp;
-                x = 4;
-                y = 0;
-                change = 0;
-            } else if(change == 1) {
-                hold = blockType;
-                newBlock();
-            }
+            controller.holdSwap();
+            syncStateFromController();
+            repaint();
             break;
         }
     }
@@ -238,11 +227,5 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         }
     }
 
-    class TimerListener implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            repaint();
-            down_shift();
-        }
-    }
+    // 計時邏輯已集中到 TimerService，不再在面板內使用 Swing Timer
 }

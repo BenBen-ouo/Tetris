@@ -1,27 +1,34 @@
 package controller;
 
-import java.util.Random;
 import model.Board;
+import model.PieceGenerator;
 import model.Tetromino;
 
 // 單一局遊戲狀態與邏輯：方塊生成、移動、旋轉、落下、固定、檢查
 public class GameController {
     private final Board board;
-    private final Random random = new Random();
+    private PieceGenerator generator = new PieceGenerator();
 
     private int blockType;   // 0~6
     private int turnState;   // 0~3
     private int x, y;        // 目前方塊位置
     private int hold = -1;   // 暫存
     private int next;        // 下一個
-    private int change = 1;  // 是否可切換 hold
+    private int change = 1;  // 是否可切換 hold（本回合只允許一次）
     private int flag = 0;    // 與舊程式相容（0:飄落中, 1:已固定）
 
     public GameController(Board board) {
         this.board = board;
         this.board.initMap();
-        this.next = random.nextInt(7);
+        this.next = generator.next();
         newBlock();
+    }
+
+    // 可替換生成器（測試或不同隨機策略）
+    public void setGenerator(PieceGenerator generator) {
+        if (generator != null) {
+            this.generator = generator;
+        }
     }
 
     public Board getBoard() { return board; }
@@ -32,12 +39,13 @@ public class GameController {
     public int getHold() { return hold; }
     public int getNext() { return next; }
     public int getFlag() { return flag; }
+    public int getChange() { return change; }
 
     public void newBlock() {
         flag = 0;
         blockType = next;
-        change = 1;
-        next = random.nextInt(7);
+        change = 1; // 新方塊出現後允許一次 hold
+        next = generator.next();
         turnState = 0;
         x = 4; y = 0;
         if (gameOver(x, y) == 1) {
@@ -107,6 +115,32 @@ public class GameController {
             newBlock();
         }
         return 0;
+    }
+
+    // 切換暫存（Shift）：本回合只允許一次
+    public void holdSwap() {
+        if (change == 1) {
+            if (hold >= 0) {
+                int tmp = hold;
+                hold = blockType;
+                blockType = tmp;
+                x = 4;
+                y = 0;
+                turnState = 0;
+                change = 0;
+            } else {
+                hold = blockType;
+                newBlock();
+                change = 0; // 本回合已使用
+            }
+        }
+    }
+
+    // 計時器集中化預留：之後由 TimerService 或控制器驅動 tick
+    public void tick() {
+        // 預留：依模式進行 soft drop、加速、計分/計時等
+        // 目前維持原行為：每 tick 嘗試下落一格
+        down_shift();
     }
 
     // 之後可擴充：SRS踢牆、B2B、Combo、Hold 切換等邏輯
