@@ -17,6 +17,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private int turnState; // 暫存繪製使用（由 controller 取得）
     private int x, y, hold, next; // 暫存繪製（由 controller 取得）
     private int flag = 0; // 與舊程式相容（由 controller 提供）
+    Image currentImg = null;
     private final Image b1;
     private final Image b2;
     private final Image holdPhoto;
@@ -161,11 +162,13 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             countdown++;
             if(countdown == 4){
                 repaint();
-                onFinished.run();
-                ((Timer)e.getSource()).stop(); 
-                countdown = 5;
+                onFinished.run();   
             }
-            repaint();
+            else if(countdown == 5){
+                ((Timer)e.getSource()).stop(); 
+                repaint();
+            }
+            else{repaint();}
         });
         countTimer.start();
     }
@@ -252,13 +255,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                 repaint();
             }
         }
-        if (countdown >= 0 && countdown <= 3) {
-            Image currentImg = null;
+        if (countdown >= 1 && countdown <= 4) {
+            
             if (countdown == 1) currentImg = img3;
             else if (countdown == 2) currentImg = img2;
             else if (countdown == 3) currentImg = img1;
             else if (countdown == 4) currentImg = imgGo;
-            else if (countdown == 5) currentImg = null;
 
             if (currentImg != null) {
                 // 設定倒數圖片大小與位置（正中央）
@@ -269,6 +271,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                 g2d.drawImage(currentImg, countDownX, countDownY, countDownWidth, countDownHeight, this);
             }
         }
+        if (countdown == 5) currentImg = null;
     }
 
     // 與控制器同步狀態（供繪製與既有流程使用）
