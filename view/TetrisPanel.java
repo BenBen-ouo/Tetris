@@ -4,6 +4,7 @@ import controller.GameController;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.List;
 import javax.swing.*;
 import model.Board;
 import model.Tetromino;
@@ -30,6 +31,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private float alpha = 1.0f;  
        // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
     private final int TOTAL_W = 660;
+    // 可自訂的 Next 預覽垂直間距（像素）
+    private int nextSpacing = 120;
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -218,10 +221,21 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                 }
             }
         }
-        for (int i = 0; i < 16; i++) {
-            int[] nextRot = Tetromino.values()[next].rotation(0);
-            if (nextRot[i] == 1) {
-                graphics.drawImage(color[next], (i%4)*33 + 530 + offsetX, (i/4)*33 + 3 + 80 + offsetY, null);
+        // 繪製多個 Next 預覽：同一水平位置，往下堆疊
+        List<Integer> nexts = controller.getNextQueue();
+        int previewCount = Math.min(4, nexts.size());
+        for (int j = 0; j < previewCount; j++) {
+            int nextType = nexts.get(j);
+            int[] nextRot = Tetromino.values()[nextType].rotation(0);
+            for (int i = 0; i < 16; i++) {
+                if (nextRot[i] == 1) {
+                    graphics.drawImage(
+                        color[nextType],
+                        (i%4)*33 + 530 + offsetX,
+                        (i/4)*33 + 3 + 80 + offsetY + j * nextSpacing,
+                        null
+                    );
+                }
             }
         }
 
@@ -324,6 +338,14 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             }
         }
         else{return;}
+    }
+
+    // 外部可自訂 Next 預覽間距
+    public void setNextSpacing(int spacing) {
+        if (spacing > 0) {
+            this.nextSpacing = spacing;
+            repaint();
+        }
     }
 
     void Sleep(int milliseconds) {

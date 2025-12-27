@@ -1,5 +1,9 @@
 package controller;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 import model.Board;
 import model.PieceGenerator;
 import model.Tetromino;
@@ -13,14 +17,18 @@ public class GameController {
     private int turnState;   // 0~3
     private int x, y;        // 目前方塊位置
     private int hold = -1;   // 暫存
-    private int next;        // 下一個
+    // 多個下一個方塊預覽佇列（預設顯示 4 個）
+    private final Deque<Integer> nextQueue = new ArrayDeque<>();
     private int change = 1;  // 是否可切換 hold（本回合只允許一次）
     private int flag = 0;    // 與舊程式相容（0:飄落中, 1:已固定）
 
     public GameController(Board board) {
         this.board = board;
         this.board.initMap();
-        this.next = generator.next();
+        // 初始化預覽佇列，預設顯示 4 個
+        for (int i = 0; i < 4; i++) {
+            nextQueue.addLast(generator.next());
+        }
         newBlock();
     }
 
@@ -37,15 +45,20 @@ public class GameController {
     public int getX() { return x; }
     public int getY() { return y; }
     public int getHold() { return hold; }
-    public int getNext() { return next; }
+    // 與舊介面相容：回傳第一個預覽
+    public int getNext() { return nextQueue.isEmpty() ? -1 : nextQueue.peekFirst(); }
+    // 新增：取得全部預覽佇列（複本，避免外部修改）
+    public List<Integer> getNextQueue() { return new ArrayList<>(nextQueue); }
     public int getFlag() { return flag; }
     public int getChange() { return change; }
 
     public void newBlock() {
         flag = 0;
-        blockType = next;
+        // 取用第一個預覽作為目前方塊
+        blockType = nextQueue.removeFirst();
         change = 1; // 新方塊出現後允許一次 hold
-        next = generator.next();
+        // 維持預覽佇列長度：補上一個新生成的方塊
+        nextQueue.addLast(generator.next());
         turnState = 0;
         x = 4; y = 0;
         if (gameOver(x, y) == 1) {
