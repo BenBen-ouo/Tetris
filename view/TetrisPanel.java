@@ -28,8 +28,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     int countdown = -1;// -1表示倒數還沒有開始
     private long startTime;
     private float alpha = 1.0f;  
-       // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
     private final int TOTAL_W = 660;
+    private JButton homeButton;
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -65,31 +65,24 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         hold = controller.getHold();
         next = controller.getNext();
 
-        // 在 TetrisPanel 建構子內修改 homeButton 部分
-        JButton homeButton = new JButton("Home");
-        homeButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        homeButton.setBounds(10, 10, 80, 45);
-        Color myDefaultBtnColor = new Color(240, 240, 240); 
-        homeButton.setBackground(myDefaultBtnColor);
-        homeButton.setForeground(Color.BLACK);
-        homeButton.setFocusable(false); 
-        homeButton.setFocusPainted(false);
-        homeButton.setOpaque(true);
-        homeButton.setBorder(BorderFactory.createRaisedBevelBorder());
-
+        homeButton = new JButton("Home");
+        homeButton.setFont(new Font("SansSerif", Font.BOLD, 12));
+        homeButton.setBounds(10, 10, 80, 50);
+        homeButton.setVisible(false);
         homeButton.addActionListener(e -> {
-            Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
+
+        Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
             frame.showStartScreen();
         });
-
+        homeButton.setFocusPainted(false);
+        homeButton.setOpaque(true); // 確保背景顏色能顯示
         homeButton.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                homeButton.setBackground(Color.DARK_GRAY);
+                homeButton.setBackground(Color.DARK_GRAY); // 滑鼠進入時變色
                 homeButton.setForeground(Color.WHITE);
             }
-
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                homeButton.setBackground(myDefaultBtnColor); 
+                homeButton.setBackground(UIManager.getColor("Button.background")); // 滑鼠離開時變回原色
                 homeButton.setForeground(Color.BLACK);
             }
         });
@@ -187,6 +180,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         Timer countTimer = new Timer(1000, e -> {
             countdown++;
             if(countdown == 4){
+                homeButton.setVisible(true);
                 repaint();
                 onFinished.run();   
             }
@@ -209,7 +203,9 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         this.countdown = -1;
         this.alpha = 1.0f;
         this.startTime = System.currentTimeMillis();
-    
+        if (homeButton != null) {
+            homeButton.setVisible(false);
+        }
         repaint();
     }
 
