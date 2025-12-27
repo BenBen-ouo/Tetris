@@ -66,39 +66,34 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         next = controller.getNext();
 
         // 在 TetrisPanel 建構子內修改 homeButton 部分
-JButton homeButton = new JButton("Home");
-homeButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-homeButton.setBounds(10, 10, 80, 45);
-
-// 1. 強制設定初始顏色，不依賴系統預設
-Color myDefaultBtnColor = new Color(240, 240, 240); 
-homeButton.setBackground(myDefaultBtnColor);
-homeButton.setForeground(Color.BLACK);
-
-// 2. 關鍵：防止按鈕搶走俄羅斯方塊的鍵盤焦點
-homeButton.setFocusable(false); 
-homeButton.setFocusPainted(false);
-homeButton.setOpaque(true);
-homeButton.setBorder(BorderFactory.createRaisedBevelBorder()); // 增加一點立體感
-
-homeButton.addActionListener(e -> {
-    Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
-    frame.showStartScreen();
-});
-
-homeButton.addMouseListener(new java.awt.event.MouseAdapter() {
-    public void mouseEntered(java.awt.event.MouseEvent evt) {
-        homeButton.setBackground(Color.DARK_GRAY);
-        homeButton.setForeground(Color.WHITE);
-    }
-
-    public void mouseExited(java.awt.event.MouseEvent evt) {
-        // 3. 修正點：直接用剛才定義的顏色，不要用 UIManager
-        homeButton.setBackground(myDefaultBtnColor); 
+        JButton homeButton = new JButton("Home");
+        homeButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+        homeButton.setBounds(10, 10, 80, 45);
+        Color myDefaultBtnColor = new Color(240, 240, 240); 
+        homeButton.setBackground(myDefaultBtnColor);
         homeButton.setForeground(Color.BLACK);
-    }
-});
-this.add(homeButton);
+        homeButton.setFocusable(false); 
+        homeButton.setFocusPainted(false);
+        homeButton.setOpaque(true);
+        homeButton.setBorder(BorderFactory.createRaisedBevelBorder());
+
+        homeButton.addActionListener(e -> {
+            Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
+            frame.showStartScreen();
+        });
+
+        homeButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                homeButton.setBackground(Color.DARK_GRAY);
+                homeButton.setForeground(Color.WHITE);
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                homeButton.setBackground(myDefaultBtnColor); 
+                homeButton.setForeground(Color.BLACK);
+            }
+        });
+        this.add(homeButton);
     }
 
     // 外部計時器呼叫本方法以驅動遊戲邏輯
