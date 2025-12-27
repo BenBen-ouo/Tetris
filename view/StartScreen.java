@@ -1,12 +1,12 @@
 package view;
 
-import javax.swing.*;
 import java.awt.*;
+import javax.swing.*;
 
 public class StartScreen extends JPanel {
     private Tetris parentFrame;
     private final Image startBackground = Toolkit.getDefaultToolkit().getImage("image/startPage_background.png");
-    private final Image Background = new ImageIcon("image/4.jpg").getImage();
+    private final Image Background = new ImageIcon("image/background_homepage.jpg").getImage();
 
     public StartScreen(Tetris frame) {
         this.parentFrame = frame;

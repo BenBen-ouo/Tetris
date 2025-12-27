@@ -48,7 +48,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         img2 = Toolkit.getDefaultToolkit().getImage("image/countdown_two.png");
         img3 = Toolkit.getDefaultToolkit().getImage("image/countdown_three.png");
         imgGo = Toolkit.getDefaultToolkit().getImage("image/countdown_go.png");
-        backgroundImage = Toolkit.getDefaultToolkit().getImage("image/5.jpg");
+        backgroundImage = Toolkit.getDefaultToolkit().getImage("image/background_gamepage.jpg");
         color[0] = Toolkit.getDefaultToolkit().getImage("image/blue.png");
         color[1] = Toolkit.getDefaultToolkit().getImage("image/green.png");
         color[2] = Toolkit.getDefaultToolkit().getImage("image/red.png");
