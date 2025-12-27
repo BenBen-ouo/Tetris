@@ -22,14 +22,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private final Image holdPhoto;
     private final Image nextPhoto;
     private final Image startPhoto;
+    private final Image backgroundImage;
     private final Image img3, img2, img1, imgGo;
     private int countdown = -1;// -1表示倒數還沒有開始
     private long startTime;
     private float alpha = 1.0f;  
        // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
-    private final int HOLD_W = 150;
-    private final int MAP_W = 330;
-    private final int NEXT_W = 180;
     private final int TOTAL_W = 660;
 
     // 方塊顏色圖片陣列
@@ -49,6 +47,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         img2 = Toolkit.getDefaultToolkit().getImage("image/countdown_two.png");
         img3 = Toolkit.getDefaultToolkit().getImage("image/countdown_three.png");
         imgGo = Toolkit.getDefaultToolkit().getImage("image/countdown_go.png");
+        backgroundImage = Toolkit.getDefaultToolkit().getImage("image/5.jpg");
         color[0] = Toolkit.getDefaultToolkit().getImage("image/blue.png");
         color[1] = Toolkit.getDefaultToolkit().getImage("image/green.png");
         color[2] = Toolkit.getDefaultToolkit().getImage("image/red.png");
@@ -174,12 +173,17 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     @Override
     public void paintComponent(Graphics graphics) {
         int offsetX = (getWidth() - TOTAL_W) / 2;
-        int offsetY = 50;
+        int offsetY = 25;
         super.paintComponent(graphics);
         Graphics2D g2d = (Graphics2D) graphics;
 
         graphics.drawImage(holdPhoto, offsetX, offsetY, 150, 148, this);
         graphics.drawImage(nextPhoto, 500 + offsetX, offsetY, 179, 547, this);
+
+        Composite oldComposite = g2d.getComposite();
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+        g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+        g2d.setComposite(oldComposite);
 
         for(int i = 0; i < 10; i++) {
             for(int j = 0; j < 20; j++) {

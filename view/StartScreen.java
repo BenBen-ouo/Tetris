@@ -5,13 +5,14 @@ import java.awt.*;
 
 public class StartScreen extends JPanel {
     private Tetris parentFrame;
+    private final Image startBackground = Toolkit.getDefaultToolkit().getImage("image/startPage_background.png");
+    private final Image Background = new ImageIcon("image/4.jpg").getImage();
 
     public StartScreen(Tetris frame) {
         this.parentFrame = frame;
 
         this.setLayout(new GridBagLayout());
-        this.setBackground(Color.BLACK);
-
+        
         JLabel titleLabel = new JLabel("TETRIS GAME");
         titleLabel.setFont(new Font("SansSerif", Font.CENTER_BASELINE, 70));
         titleLabel.setForeground(Color.WHITE);
@@ -44,5 +45,30 @@ public class StartScreen extends JPanel {
         gbc.gridy = 1;
         gbc.insets = new Insets(0, 0, 0, 0);
         add(startButton, gbc);
+    }
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, getWidth(), getHeight());
+        Graphics2D g2d = (Graphics2D) g;
+
+        if(Background != null) {
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2f));
+            g2d.setColor(Color.BLACK);
+            g2d.drawImage(Background, 0, 0, getWidth(), getHeight(), this);
+        }
+        
+        if (startBackground != null) {
+            int imgW = 400; 
+            int imgH = 300;
+
+            int x = (getWidth() - imgW) / 2;
+            int y = (getHeight() - imgH) / 2-100;
+
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f));
+            g2d.drawImage(startBackground, x, y, imgW, imgH, this);
+        }
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
     }
 }
