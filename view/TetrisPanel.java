@@ -32,7 +32,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
        // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
     private final int TOTAL_W = 660;
     // 可自訂的 Next 預覽垂直間距（像素）
-    private int nextSpacing = 120;
+    private int nextSpacing = 100;
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -64,9 +64,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         board = new Board();
         map = board.getMap();
         controller = new GameController(board);
-        initMap(); // 初始化地圖
-        // 由控制器初始化新方塊
-        newBlock();
+        // 由控制器在建構時已完成盤面初始化與第一個方塊生成，這裡不再重複呼叫
         hold = controller.getHold();
         next = controller.getNext();
 
@@ -338,14 +336,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             }
         }
         else{return;}
-    }
-
-    // 外部可自訂 Next 預覽間距
-    public void setNextSpacing(int spacing) {
-        if (spacing > 0) {
-            this.nextSpacing = spacing;
-            repaint();
-        }
     }
 
     void Sleep(int milliseconds) {
