@@ -4,7 +4,7 @@ import javax.swing.*;
 import controller.TimerService;
 
 public class Tetris extends JFrame {
-    public final int WIDTH = 700, HEIGHT = 750;
+    public final int WIDTH = 1000, HEIGHT = 750;
     private StartScreen startScreen;
     private TetrisPanel gamePanel;
     private TimerService timerService;
@@ -31,14 +31,15 @@ public class Tetris extends JFrame {
         this.remove(startScreen);
         this.add(gamePanel);
         this.addKeyListener(gamePanel); 
+
+        gamePanel.resetAnimation();
         
         this.gamePanel.setVisible(true);
         this.revalidate(); // 重新計算佈局
         this.repaint(); // 重新繪製畫面
         this.requestFocusInWindow();
 
-        // 開始由外部計時器驅動遊戲
-        timerService.start();
+        gamePanel.startGameFlow(() -> timerService.start());
     }
     
     
