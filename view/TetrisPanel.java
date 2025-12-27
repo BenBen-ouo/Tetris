@@ -12,12 +12,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     public int[][] map = new int [10][20]; // 10寬 20高（初始化後會指向 Board 的 map）
     private Board board; // 盤面資料來源
     // 轉為由 GameController 管理狀態
-    private final GameController controller;
+    private GameController controller;
     private int blockType; // 暫存繪製使用（由 controller 取得）
     private int turnState; // 暫存繪製使用（由 controller 取得）
     private int x, y, hold, next; // 暫存繪製（由 controller 取得）
     private int flag = 0; // 與舊程式相容（由 controller 提供）
-    Image currentImg = null;
+    static Image currentImg = null;
     private final Image b1;
     private final Image b2;
     private final Image holdPhoto;
@@ -25,7 +25,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private final Image startPhoto;
     private final Image backgroundImage;
     private final Image img3, img2, img1, imgGo;
-    private int countdown = -1;// -1表示倒數還沒有開始
+    int countdown = -1;// -1表示倒數還沒有開始
     private long startTime;
     private float alpha = 1.0f;  
        // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
@@ -57,17 +57,48 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         color[5] = Toolkit.getDefaultToolkit().getImage("image/orange.png");
         color[6] = Toolkit.getDefaultToolkit().getImage("image/pink.png");
         
-        // 初始化 Board 與 map
         board = new Board();
         map = board.getMap();
         controller = new GameController(board);
-        initMap(); // 初始化地圖
-        // 由控制器初始化新方塊
+        initMap();
         newBlock();
         hold = controller.getHold();
         next = controller.getNext();
 
-        // 計時器不在面板內管理，由外部 TimerService 呼叫 tick()
+        // 在 TetrisPanel 建構子內修改 homeButton 部分
+JButton homeButton = new JButton("Home");
+homeButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+homeButton.setBounds(10, 10, 80, 45);
+
+// 1. 強制設定初始顏色，不依賴系統預設
+Color myDefaultBtnColor = new Color(240, 240, 240); 
+homeButton.setBackground(myDefaultBtnColor);
+homeButton.setForeground(Color.BLACK);
+
+// 2. 關鍵：防止按鈕搶走俄羅斯方塊的鍵盤焦點
+homeButton.setFocusable(false); 
+homeButton.setFocusPainted(false);
+homeButton.setOpaque(true);
+homeButton.setBorder(BorderFactory.createRaisedBevelBorder()); // 增加一點立體感
+
+homeButton.addActionListener(e -> {
+    Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
+    frame.showStartScreen();
+});
+
+homeButton.addMouseListener(new java.awt.event.MouseAdapter() {
+    public void mouseEntered(java.awt.event.MouseEvent evt) {
+        homeButton.setBackground(Color.DARK_GRAY);
+        homeButton.setForeground(Color.WHITE);
+    }
+
+    public void mouseExited(java.awt.event.MouseEvent evt) {
+        // 3. 修正點：直接用剛才定義的顏色，不要用 UIManager
+        homeButton.setBackground(myDefaultBtnColor); 
+        homeButton.setForeground(Color.BLACK);
+    }
+});
+this.add(homeButton);
     }
 
     // 外部計時器呼叫本方法以驅動遊戲邏輯
@@ -171,6 +202,20 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             else{repaint();}
         });
         countTimer.start();
+    }
+    public void resetGame() {
+        this.board = new Board();         // 1. 建立新地圖
+        this.map = board.getMap();        // 2. 更新地圖引用
+        this.controller = new GameController(this.board); // 3. 讓控制器接管新地圖
+    
+        this.initMap(); 
+        this.newBlock();                  // 4. 產生第一個方塊
+    
+        this.countdown = -1;
+        this.alpha = 1.0f;
+        this.startTime = System.currentTimeMillis();
+    
+        repaint();
     }
 
     @Override
