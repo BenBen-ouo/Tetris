@@ -293,28 +293,31 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
     @Override
     public void keyPressed(KeyEvent e) {
-        switch (e.getKeyCode()) {
-        case KeyEvent.VK_DOWN:
-            down_shift();
-            break;
-        case KeyEvent.VK_UP:
-            rotate();
-            break;
-        case KeyEvent.VK_RIGHT:
-            r_shift();
-            break;
-        case KeyEvent.VK_LEFT:
-            l_shift();
-            break;
-        case KeyEvent.VK_SPACE:
-            while(down_shift() == 1);
-            break;
-        case KeyEvent.VK_SHIFT:
-            controller.holdSwap();
-            syncStateFromController();
-            repaint();
-            break;
+        if(countdown == 5){
+            switch (e.getKeyCode()) {
+                case KeyEvent.VK_DOWN:
+                    down_shift();
+                    break;
+                case KeyEvent.VK_UP:
+                    rotate();
+                    break;
+                case KeyEvent.VK_RIGHT:
+                    r_shift();
+                    break;
+                case KeyEvent.VK_LEFT:
+                    l_shift();
+                    break;
+                case KeyEvent.VK_SPACE:
+                    while(down_shift() == 1);
+                    break;
+                case KeyEvent.VK_SHIFT: 
+                    controller.holdSwap();
+                    syncStateFromController();
+                    repaint();
+                    break;
+            }
         }
+        else{return;}
     }
 
     void Sleep(int milliseconds) {
