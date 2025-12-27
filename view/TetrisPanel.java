@@ -98,12 +98,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         return GameController.canPlace(board, x, y, type, state);
     }
 
-    public void rotate() {
-        controller.rotate();
-        syncStateFromController();
-        repaint();
-    }
-
     public int r_shift() {
         int moved = controller.r_shift();
         syncStateFromController();
@@ -299,7 +293,19 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     down_shift();
                     break;
                 case KeyEvent.VK_UP:
-                    rotate();
+                    controller.rotateClockwise();
+                    syncStateFromController();
+                    repaint();
+                    break;
+                case KeyEvent.VK_X: // X 順時針旋轉，與上方向鍵一致
+                    controller.rotateClockwise();
+                    syncStateFromController();
+                    repaint();
+                    break;
+                case KeyEvent.VK_Z: // Z 逆時針旋轉，取前一個旋轉狀態
+                    controller.rotateCCW();
+                    syncStateFromController();
+                    repaint();
                     break;
                 case KeyEvent.VK_RIGHT:
                     r_shift();

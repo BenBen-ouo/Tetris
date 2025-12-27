@@ -83,8 +83,16 @@ public class GameController {
         return 1;
     }
 
-    public void rotate() {
+    public void rotateClockwise() {
         int tmpState = (turnState + 1) % 4; // 目前先維持原本順時針一段
+        if (canPlace(x, y, blockType, tmpState) == 1) {
+            turnState = tmpState;
+        }
+    }
+
+    // 逆時針旋轉（Z）：取前一個旋轉狀態
+    public void rotateCCW() {
+        int tmpState = (turnState + 3) % 4; // 等同於 (turnState - 1 + 4) % 4
         if (canPlace(x, y, blockType, tmpState) == 1) {
             turnState = tmpState;
         }
