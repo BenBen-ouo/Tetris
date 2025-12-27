@@ -19,7 +19,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private int flag = 0; // 與舊程式相容（由 controller 提供）
     private final Image b1;
     private final Image b2;
-    // Timer 交由外部（Tetris/TimerService）管理
+    private final Image holdPhoto;
+    private final Image nextPhoto;
+    private final Image startPhoto;
+    private long startTime;
+    private float alpha = 1.0f;  
+       // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -30,6 +35,10 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
         b1 = Toolkit.getDefaultToolkit().getImage("image/background1.png");
         b2 = Toolkit.getDefaultToolkit().getImage("image/background2.png");
+        holdPhoto = Toolkit.getDefaultToolkit().getImage("image/tetris_grid_Hold.png");
+        nextPhoto = Toolkit.getDefaultToolkit().getImage("image/tetris_grid_Next.png");
+        startPhoto = Toolkit.getDefaultToolkit().getImage("image/blitz_banner.png"); // 換成你的檔名
+        startTime = System.currentTimeMillis();
         color[0] = Toolkit.getDefaultToolkit().getImage("image/blue.png");
         color[1] = Toolkit.getDefaultToolkit().getImage("image/green.png");
         color[2] = Toolkit.getDefaultToolkit().getImage("image/red.png");
@@ -38,13 +47,13 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         color[5] = Toolkit.getDefaultToolkit().getImage("image/orange.png");
         color[6] = Toolkit.getDefaultToolkit().getImage("image/pink.png");
         
-        JLabel NEXT = new JLabel("NEXT"); // 下一個方塊標題
+        JLabel NEXT = new JLabel(); // 下一個方塊標題
         NEXT.setFont(new Font("", Font.BOLD, 50));
         NEXT.setBounds(500, 0, 200, 100);
         NEXT.setForeground(Color.white);
         add(NEXT);
 
-        JLabel HOLD = new JLabel("HOLD");
+        JLabel HOLD = new JLabel();
         HOLD.setFont(new Font("", Font.BOLD, 50));
         HOLD.setBounds(0, 0, 200, 100);
         HOLD.setForeground(Color.white);
@@ -128,9 +137,24 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         map = board.getMap();
     }
 
+    public void resetAnimation() {
+    // 將 startTime 更新為「現在」，並把透明度還原
+        this.startTime = System.currentTimeMillis();
+        this.alpha = 1.0f;
+        repaint();
+    }
+
     @Override
     public void paintComponent(Graphics graphics) {
+        
         super.paintComponent(graphics);
+        Graphics2D g2d = (Graphics2D) graphics;
+
+        graphics.drawImage(holdPhoto, 0, 0, 150, 148, this);
+        graphics.drawImage(nextPhoto, 500, 0, 179, 547, this);
+
+        
+
         for(int i = 0; i < 10; i++) {
             for(int j = 0; j < 20; j++) {
                 if(map[i][j] == 0) {
@@ -163,7 +187,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             for (int i = 0; i < 16; i++) {
                 int[] holdRot = Tetromino.values()[hold].rotation(0);
                 if (holdRot[i] == 1) {
-                    graphics.drawImage(color[hold], (i%4)*33 + 3, (i/4)*33 + 3 + 80, null);
+                     graphics.drawImage(color[hold], (i%4)*33 + 15, (i/4)*33 + 45, null); 
                 }
             }
         }
@@ -171,6 +195,31 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             int[] nextRot = Tetromino.values()[next].rotation(0);
             if (nextRot[i] == 1) {
                 graphics.drawImage(color[next], (i%4)*33 + 530, (i/4)*33 + 3 + 80, null);
+            }
+        }
+
+        long elapsed = System.currentTimeMillis() - startTime;
+    
+        int imgX = (getWidth() - 700) / 2;
+        int imgY = getHeight() - 70 - 60;
+
+        if (elapsed > 2000) {
+            // 2秒後開始每秒減少透明度
+            alpha = 1.0f - (elapsed - 2000) / 1000.0f;
+            if (alpha < 0) alpha = 0;
+        }
+
+        if (alpha > 0) {
+            // 套用透明度並繪製
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
+            g2d.drawImage(startPhoto, imgX, imgY, 700, 70, this);
+            
+            // 繪製完畢必須重設透明度，以免影響下一輪繪圖
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+            
+            // 只要還在消失動畫中，就持續要求重繪
+            if (elapsed > 2000) {
+                repaint();
             }
         }
     }

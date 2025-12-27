@@ -31,6 +31,8 @@ public class Tetris extends JFrame {
         this.remove(startScreen);
         this.add(gamePanel);
         this.addKeyListener(gamePanel); 
+
+        gamePanel.resetAnimation();
         
         this.gamePanel.setVisible(true);
         this.revalidate(); // 重新計算佈局
