@@ -22,6 +22,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private final Image holdPhoto;
     private final Image nextPhoto;
     private final Image startPhoto;
+    private final Image img3, img2, img1, imgGo;
+    private int countdown = -1;// -1表示倒數還沒有開始
     private long startTime;
     private float alpha = 1.0f;  
        // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
@@ -37,8 +39,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         b2 = Toolkit.getDefaultToolkit().getImage("image/background2.png");
         holdPhoto = Toolkit.getDefaultToolkit().getImage("image/tetris_grid_Hold.png");
         nextPhoto = Toolkit.getDefaultToolkit().getImage("image/tetris_grid_Next.png");
-        startPhoto = Toolkit.getDefaultToolkit().getImage("image/blitz_banner.png"); // 換成你的檔名
+        startPhoto = Toolkit.getDefaultToolkit().getImage("image/blitz_banner.png");
         startTime = System.currentTimeMillis();
+        img1 = Toolkit.getDefaultToolkit().getImage("image/countdown_one.png");
+        img2 = Toolkit.getDefaultToolkit().getImage("image/countdown_two.png");
+        img3 = Toolkit.getDefaultToolkit().getImage("image/countdown_three.png");
+        imgGo = Toolkit.getDefaultToolkit().getImage("image/countdown_go.png");
         color[0] = Toolkit.getDefaultToolkit().getImage("image/blue.png");
         color[1] = Toolkit.getDefaultToolkit().getImage("image/green.png");
         color[2] = Toolkit.getDefaultToolkit().getImage("image/red.png");
@@ -144,6 +150,35 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         repaint();
     }
 
+    public void startGameFlow(Runnable onFinished) {
+        this.startTime = System.currentTimeMillis();
+        this.alpha = 1.0f;
+        this.countdown = -1; // 還沒進入 321 倒數
+        repaint();
+
+        Timer bannerTimer = new Timer(2000, e -> {
+            startCountdown(onFinished); 
+        });
+        bannerTimer.setRepeats(false); // 透過這行設定讓它只跑一次
+        bannerTimer.start();
+    }
+
+    private void startCountdown(Runnable onFinished) {
+        this.countdown = 0;
+    
+        Timer countTimer = new Timer(1000, e -> {
+            countdown++;
+            if(countdown == 4){
+                repaint();
+                onFinished.run();
+                ((Timer)e.getSource()).stop(); 
+                countdown = 5;
+            }
+            repaint();
+        });
+        countTimer.start();
+    }
+
     @Override
     public void paintComponent(Graphics graphics) {
         
@@ -220,6 +255,23 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             // 只要還在消失動畫中，就持續要求重繪
             if (elapsed > 2000) {
                 repaint();
+            }
+        }
+        if (countdown >= 0 && countdown <= 3) {
+            Image currentImg = null;
+            if (countdown == 1) currentImg = img3;
+            else if (countdown == 2) currentImg = img2;
+            else if (countdown == 3) currentImg = img1;
+            else if (countdown == 4) currentImg = imgGo;
+            else if (countdown == 5) currentImg = null;
+
+            if (currentImg != null) {
+                // 設定倒數圖片大小與位置（正中央）
+                int countDownWidth = 200;
+                int countDownHeight = 200;
+                int countDownX = (getWidth() - countDownWidth) / 2;
+                int countDownY = (getHeight() - countDownHeight) / 2;
+                g2d.drawImage(currentImg, countDownX, countDownY, countDownWidth, countDownHeight, this);
             }
         }
     }

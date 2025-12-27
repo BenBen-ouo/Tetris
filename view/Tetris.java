@@ -39,8 +39,7 @@ public class Tetris extends JFrame {
         this.repaint(); // 重新繪製畫面
         this.requestFocusInWindow();
 
-        // 開始由外部計時器驅動遊戲
-        timerService.start();
+        gamePanel.startGameFlow(() -> timerService.start());
     }
     
     
