@@ -4,7 +4,7 @@ import javax.swing.*;
 import controller.TimerService;
 
 public class Tetris extends JFrame {
-    public final int WIDTH = 700, HEIGHT = 750;
+    public final int WIDTH = 1000, HEIGHT = 820;
     private StartScreen startScreen;
     private TetrisPanel gamePanel;
     private TimerService timerService;

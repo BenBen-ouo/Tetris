@@ -27,6 +27,10 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private long startTime;
     private float alpha = 1.0f;  
        // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
+    private final int HOLD_W = 150;
+    private final int MAP_W = 330;
+    private final int NEXT_W = 180;
+    private final int TOTAL_W = 660;
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -53,18 +57,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         color[5] = Toolkit.getDefaultToolkit().getImage("image/orange.png");
         color[6] = Toolkit.getDefaultToolkit().getImage("image/pink.png");
         
-        JLabel NEXT = new JLabel(); // 下一個方塊標題
-        NEXT.setFont(new Font("", Font.BOLD, 50));
-        NEXT.setBounds(500, 0, 200, 100);
-        NEXT.setForeground(Color.white);
-        add(NEXT);
-
-        JLabel HOLD = new JLabel();
-        HOLD.setFont(new Font("", Font.BOLD, 50));
-        HOLD.setBounds(0, 0, 200, 100);
-        HOLD.setForeground(Color.white);
-        add(HOLD);
-
         // 初始化 Board 與 map
         board = new Board();
         map = board.getMap();
@@ -181,24 +173,23 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
     @Override
     public void paintComponent(Graphics graphics) {
-        
+        int offsetX = (getWidth() - TOTAL_W) / 2;
+        int offsetY = 50;
         super.paintComponent(graphics);
         Graphics2D g2d = (Graphics2D) graphics;
 
-        graphics.drawImage(holdPhoto, 0, 0, 150, 148, this);
-        graphics.drawImage(nextPhoto, 500, 0, 179, 547, this);
-
-        
+        graphics.drawImage(holdPhoto, offsetX, offsetY, 150, 148, this);
+        graphics.drawImage(nextPhoto, 500 + offsetX, offsetY, 179, 547, this);
 
         for(int i = 0; i < 10; i++) {
             for(int j = 0; j < 20; j++) {
                 if(map[i][j] == 0) {
                     if((i+j)%2 == 0)
-                        graphics.drawImage(b1, i*30+3*(i+1)+150, j*30+3*(j+1), null);
+                        graphics.drawImage(b1, i*30+3*(i+1)+150+offsetX, j*30+3*(j+1)+offsetY, null);
                     else
-                        graphics.drawImage(b2, i*30+3*(i+1)+150, j*30+3*(j+1), null);
+                        graphics.drawImage(b2, i*30+3*(i+1)+150+offsetX, j*30+3*(j+1)+offsetY, null);
                 } else
-                    graphics.drawImage(color[map[i][j]-1], i*30+3*(i+1)+150, j*30+3*(j+1), null);
+                    graphics.drawImage(color[map[i][j]-1], i*30+3*(i+1)+150+offsetX, j*30+3*(j+1)+offsetY, null);
             }
         }
         // 從控制器讀取目前方塊狀態
@@ -214,7 +205,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             for (int i = 0; i < 16; i++) {
                 int[] rotation = Tetromino.values()[blockType].rotation(turnState);
                 if (rotation[i] == 1) {
-                    graphics.drawImage(color[blockType], (i%4 + x)*33 + 3 + 150, (i/4 + y)*33 + 3, null);
+                    graphics.drawImage(color[blockType], (i%4 + x)*33 + 3 + 150 + offsetX, (i/4 + y)*33 + 3 + offsetY, null);
                 }
             }
         }
@@ -222,14 +213,14 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             for (int i = 0; i < 16; i++) {
                 int[] holdRot = Tetromino.values()[hold].rotation(0);
                 if (holdRot[i] == 1) {
-                     graphics.drawImage(color[hold], (i%4)*33 + 15, (i/4)*33 + 45, null); 
+                     graphics.drawImage(color[hold], (i%4)*33 + 15 + offsetX, (i/4)*33 + 45 + offsetY, null); 
                 }
             }
         }
         for (int i = 0; i < 16; i++) {
             int[] nextRot = Tetromino.values()[next].rotation(0);
             if (nextRot[i] == 1) {
-                graphics.drawImage(color[next], (i%4)*33 + 530, (i/4)*33 + 3 + 80, null);
+                graphics.drawImage(color[next], (i%4)*33 + 530 + offsetX, (i/4)*33 + 3 + 80 + offsetY, null);
             }
         }
 
@@ -327,6 +318,4 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             System.exit(0);
         }
     }
-
-    // 計時邏輯已集中到 TimerService，不再在面板內使用 Swing Timer
 }
