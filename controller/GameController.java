@@ -104,19 +104,17 @@ public class GameController {
     }
 
     // 逆時針旋轉（Z）：取前一個旋轉狀態
-    public void rotateCCW() {
+    public void rotateCounterclockwise() {
         int tmpState = (turnState + 3) % 4; // 等同於 (turnState - 1 + 4) % 4
         if (canPlace(x, y, blockType, tmpState) == 1) {
             turnState = tmpState;
         }
     }
 
-    public int r_shift() {
+    public void r_shift() {
         if (canPlace(x + 1, y, blockType, turnState) == 1) {
             x++;
-            return 1;
         }
-        return 0;
     }
 
     public void l_shift() {
