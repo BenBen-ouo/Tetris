@@ -310,7 +310,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         if (alpha > 0) {
             // 套用透明度並繪製
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            g2d.drawImage(startPhoto, 320, 300, 445, 100, this);
+            g2d.drawImage(startPhoto, 180, 120, 768, 512, this);
             
             // 繪製完畢必須重設透明度，以免影響下一輪繪圖
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
