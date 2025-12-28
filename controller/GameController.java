@@ -66,19 +66,25 @@ public class GameController {
     public int getChange() { return change; }
 
     public void newBlock() {
-        flag = 0;
-        // 取用第一個預覽作為目前方塊
-        blockType = nextQueue.removeFirst();
-        change = 1; // 新方塊出現後允許一次 hold
-        // 維持預覽佇列長度：補上一個新生成的方塊
-        nextQueue.addLast(generator.next());
-        turnState = 0;
-        x = 3; y = 0;
-        kickIndexUsed = 0;
-        currentTSpin = false;
-        cannotDropAfterRotate = false;
-        if (gameOver(x, y) == 1) {
-            board.initMap();
+        // 1. 取得新方塊前，先重設座標與狀態
+        this.turnState = 0;
+        this.x = 3; 
+        this.y = 0;
+        this.change = 1;
+    
+    // 2. 取出下一個方塊
+        if (!nextQueue.isEmpty()) {
+            this.blockType = nextQueue.removeFirst();
+            nextQueue.addLast(generator.next());
+        }
+
+        // 3. 重要：檢查這個「剛出生」的方塊位置是否合法
+        // 如果一出生就不能放，才設定 flag = 1
+        if (canPlace(x, y, blockType, turnState) == 0) {
+            this.flag = 1; 
+        }
+        else {
+            this.flag = 0; // 否則確保它是 0
         }
     }
 
@@ -188,6 +194,7 @@ public class GameController {
     }
 
     public int down_shift() {
+        if (this.flag == 1) return 0;
         if (canPlace(x, y + 1, blockType, turnState) == 1) {
             y++;
             return 1;
