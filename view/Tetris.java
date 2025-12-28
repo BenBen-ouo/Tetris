@@ -10,7 +10,7 @@ public class Tetris extends JFrame {
     private TimerService timerService;
 
     public Tetris() {
-        this.setTitle("Tetris Test");
+        this.setTitle("Tetris");
         this.setSize(WIDTH, HEIGHT);
         this.setLayout(null);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -29,17 +29,42 @@ public class Tetris extends JFrame {
 
     public void startGame() {
         this.remove(startScreen);
+        if (timerService == null) {
+            timerService = new TimerService(1000, () -> gamePanel.tick());
+        }
+        if (gamePanel != null) {
+            gamePanel.resetGame(); 
+        }
         this.add(gamePanel);
         this.addKeyListener(gamePanel); 
-
-        gamePanel.resetAnimation();
-        
-        this.gamePanel.setVisible(true);
-        this.revalidate(); // 重新計算佈局
-        this.repaint(); // 重新繪製畫面
+        this.revalidate();
+        this.repaint();
         this.requestFocusInWindow();
 
-        gamePanel.startGameFlow(() -> timerService.start());
+        gamePanel.startGameFlow(() -> {
+            if (timerService != null) {
+                timerService.start();
+            }
+        });
+    }
+
+    public void showStartScreen() {
+        if (timerService != null) {
+            timerService.stop();
+            timerService = null; 
+        }
+
+        this.removeKeyListener(gamePanel);
+
+        getContentPane().removeAll();
+
+        startScreen = new StartScreen(this);
+        startScreen.setBounds(0, 0, WIDTH, HEIGHT); 
+        add(startScreen);
+
+        revalidate(); 
+        repaint();
+        startScreen.requestFocusInWindow();
     }
     
     
