@@ -22,6 +22,18 @@ public class GameController {
     private final Deque<Integer> nextQueue = new ArrayDeque<>();
     private int change = 1;  // 是否可切換 hold（本回合只允許一次）
     private int flag = 0;    // 與舊程式相容（0:飄落中, 1:已固定）
+    // Lock Delay：現階段設定為 0，且不再於流程中使用（僅保留欄位）
+    private int lockDelayTicks = 0;
+    // Spin/Combo 顯示：SRS 使用第幾次嘗試（1-based，0 表示未用踢牆）、是否符合 T-Spin、最近一次鎖定顯示、到期時間、Combo 次數
+    private int kickIndexUsed = 0;
+    private boolean currentTSpin = false;
+    private String lastSpinText = "";
+    private long lastSpinUntilMs = 0L;
+    private int combo = -1;
+    // 旋轉完成後是否無法再下落（作為 spin 顯示條件之一）
+    private boolean cannotDropAfterRotate = false;
+    // ALL CLEAR 顯示：到期時間 TTL（毫秒），在面板中央顯示 3 秒
+    private long lastAllClearUntilMs = 0L;
 
     public GameController(Board board) {
         this.board = board;
@@ -47,7 +59,7 @@ public class GameController {
     public int getY() { return y; }
     public int getHold() { return hold; }
     // 與舊介面相容：回傳第一個預覽
-    public int getNext() { return nextQueue.isEmpty() ? -1 : nextQueue.peekFirst().intValue(); }
+    public int getNext() { return nextQueue.isEmpty() ? -1 : nextQueue.peekFirst(); }
     // 新增：取得全部預覽佇列（複本，避免外部修改）
     public List<Integer> getNextQueue() { return new ArrayList<>(nextQueue); }
     public int getFlag() { return flag; }
@@ -62,6 +74,9 @@ public class GameController {
         nextQueue.addLast(generator.next());
         turnState = 0;
         x = 4; y = 0;
+        kickIndexUsed = 0;
+        currentTSpin = false;
+        cannotDropAfterRotate = false;
         if (gameOver(x, y) == 1) {
             board.initMap();
         }
@@ -102,17 +117,26 @@ public class GameController {
         // 直接可放置：旋轉成功
         if (canPlace(x, y, blockType, toState) == 1) {
             turnState = toState;
+            // 旋轉後不可下降與 T-Spin 檢測
+            cannotDropAfterRotate = (canPlace(x, y + 1, blockType, turnState) == 0);
+            currentTSpin = detectTSpin();
             return;
         }
         // 嘗試 SRS 踢牆（O 不使用踢牆表）
         int[][] kicks = SRSSystem.getKicks(blockType, turnState, toState);
-        for (int[] k : kicks) {
+        for (int i = 0; i < kicks.length; i++) {
+            int[] k = kicks[i];
             int nx = x + k[0];
-            int ny = y + k[1];
+            // dy>0 表示向上，因此座標系 y 往上要減少
+            int ny = y - k[1];
             if (canPlace(nx, ny, blockType, toState) == 1) {
                 x = nx;
                 y = ny;
                 turnState = toState;
+                kickIndexUsed = i + 1; // 1-based
+                // 旋轉後不可下降與 T-Spin 檢測
+                cannotDropAfterRotate = (canPlace(x, y + 1, blockType, turnState) == 0);
+                currentTSpin = detectTSpin();
                 return;
             }
         }
@@ -125,17 +149,26 @@ public class GameController {
         // 直接可放置：旋轉成功
         if (canPlace(x, y, blockType, toState) == 1) {
             turnState = toState;
+            // 旋轉後不可下降與 T-Spin 檢測
+            cannotDropAfterRotate = (canPlace(x, y + 1, blockType, turnState) == 0);
+            currentTSpin = detectTSpin();
             return;
         }
         // 嘗試 SRS 踢牆（O 不使用踢牆表）
         int[][] kicks = SRSSystem.getKicks(blockType, turnState, toState);
-        for (int[] k : kicks) {
+        for (int i = 0; i < kicks.length; i++) {
+            int[] k = kicks[i];
             int nx = x + k[0];
-            int ny = y + k[1];
+            // dy>0 表示向上，因此座標系 y 往上要減少
+            int ny = y - k[1];
             if (canPlace(nx, ny, blockType, toState) == 1) {
                 x = nx;
                 y = ny;
                 turnState = toState;
+                kickIndexUsed = i + 1; // 1-based
+                // 旋轉後不可下降與 T-Spin 檢測
+                cannotDropAfterRotate = (canPlace(x, y + 1, blockType, turnState) == 0);
+                currentTSpin = detectTSpin();
                 return;
             }
         }
@@ -159,12 +192,35 @@ public class GameController {
             y++;
             return 1;
         }
-        if (canPlace(x, y + 1, blockType, turnState) == 0) {
-            setBlock(x, y, blockType, turnState);
-            board.clearFullLines();
-            newBlock();
-        }
+        // 不能下落：不鎖定、不標記觸地；交由下一次 tick 處理固定
         return 0;
+    }
+
+    // 空白鍵：硬降，直接落到底並立即鎖定（不套用 lock delay）
+    public void hardDrop() {
+        while (canPlace(x, y + 1, blockType, turnState) == 1) {
+            y++;
+        }
+        setBlock(x, y, blockType, turnState);
+        int cleared = board.clearFullLines();
+        // Combo：連續有消行則累加，沒消行則設為-1
+        combo = (cleared > 0) ? (combo + 1) : -1;
+        // ALL CLEAR：盤面全空時顯示 3 秒
+        if (isBoardEmpty()) {
+            lastAllClearUntilMs = System.currentTimeMillis() + 3000;
+        } else if (lastAllClearUntilMs != 0L && System.currentTimeMillis() > lastAllClearUntilMs) {
+            lastAllClearUntilMs = 0L;
+        }
+        // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin
+        if ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin) {
+            String name = Tetromino.values()[blockType].name();
+            lastSpinText = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
+            lastSpinUntilMs = System.currentTimeMillis() + 3000;
+        } else {
+            lastSpinText = "";
+            lastSpinUntilMs = 0L;
+        }
+        newBlock();
     }
 
     // 切換暫存（Shift）：本回合只允許一次
@@ -188,14 +244,73 @@ public class GameController {
 
     // 計時器集中化預留：之後由 TimerService 或控制器驅動 tick
     public void tick() {
-        // 預留：依模式進行 soft drop、加速、計分/計時等
-        // 目前維持原行為：每 tick 嘗試下落一格
-        down_shift();
+        // 能下落則下落；不能下落則在該 tick 立即固定
+        if (canPlace(x, y + 1, blockType, turnState) == 1) {
+            y++;
+            return;
+        }
+        setBlock(x, y, blockType, turnState);
+        int cleared = board.clearFullLines();
+        // Combo：連續有消行則累加，沒消行則設為-1
+        combo = (cleared > 0) ? (combo + 1) : -1;
+        // ALL CLEAR：盤面全空時顯示 3 秒
+        if (isBoardEmpty()) {
+            lastAllClearUntilMs = System.currentTimeMillis() + 3000;
+        } else if (lastAllClearUntilMs != 0L && System.currentTimeMillis() > lastAllClearUntilMs) {
+            lastAllClearUntilMs = 0L;
+        }
+        // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin
+        if ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin) {
+            String name = Tetromino.values()[blockType].name();
+            lastSpinText = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
+            lastSpinUntilMs = System.currentTimeMillis() + 3000;
+        } else {
+            lastSpinText = "";
+            lastSpinUntilMs = 0L;
+        }
+        newBlock();
+    }
+    public String getLastSpinText() {
+        if (lastSpinUntilMs == 0L) return "";
+        return (System.currentTimeMillis() <= lastSpinUntilMs) ? lastSpinText : "";
     }
 
-    // 之後可擴充：SRS踢牆、B2B、Combo、Hold 切換等邏輯
+    public int getCombo() { return combo; }
 
-    // ===== 靜態輔助方法：提供給現有面板逐步遷移呼叫，不改變行為 =====
+    public String getAllClearText() {
+        if (lastAllClearUntilMs == 0L) return "";
+        return (System.currentTimeMillis() <= lastAllClearUntilMs) ? "ALL CLEAR" : "";
+    }
+
+    // T-Spin 檢測：僅在當前方塊為 T，且無法再下落，且四角至少三格為填滿（出界視為填滿）
+    private boolean detectTSpin() {
+        if (blockType != Tetromino.T.ordinal()) return false;
+        // 無法再往下
+        if (canPlace(x, y + 1, blockType, turnState) == 1) return false;
+        int ox = x + 1; // SRS 中心在 4x4 的 (1,1)
+        int oy = y + 1;
+        int filled = 0;
+        filled += isFilled(ox - 1, oy - 1) ? 1 : 0; // 左上
+        filled += isFilled(ox + 1, oy - 1) ? 1 : 0; // 右上
+        filled += isFilled(ox - 1, oy + 1) ? 1 : 0; // 左下
+        filled += isFilled(ox + 1, oy + 1) ? 1 : 0; // 右下
+        return filled >= 3;
+    }
+
+    private boolean isFilled(int px, int py) {
+        if (px < 0 || py < 0 || px >= board.getWidth() || py >= board.getHeight()) return true; // 出界算填滿
+        return board.getCell(px, py) != 0;
+    }
+
+    private boolean isBoardEmpty() {
+        for (int ix = 0; ix < board.getWidth(); ix++) {
+            for (int iy = 0; iy < board.getHeight(); iy++) {
+                if (board.getCell(ix, iy) != 0) return false;
+            }
+        }
+        return true;
+    }
+
     public static int canPlace(Board board, int x, int y, int type, int state) {
         int[] rotation = Tetromino.values()[type].rotation(state);
         for (int i = 0; i < 16; i++) {

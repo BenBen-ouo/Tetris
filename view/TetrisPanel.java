@@ -264,6 +264,22 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             }
         }
 
+        // 左側顯示最近一次鎖定的 Spin（若有，持續 3 秒）
+        String spinText = controller.getLastSpinText();
+        int baseTextY = offsetY + 220;
+        if (spinText != null && !spinText.isEmpty()) {
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 40));
+            g2d.drawString(spinText, offsetX + 15, baseTextY);
+        }
+        // 在字的下方留間隔顯示 Combo
+        int combo = controller.getCombo();
+        if (combo > 0) {
+            g2d.setColor(new Color(255, 230, 120));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 28));
+            g2d.drawString("Combo x" + combo, offsetX + 15, baseTextY + 40);
+        }
+
         long elapsed = System.currentTimeMillis() - startTime;
     
         int imgX = (getWidth() - 700) / 2;
@@ -305,6 +321,19 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             }
         }
         if (countdown == 5) currentImg = null;
+
+        // 畫面中央顯示 ALL CLEAR（持續 3 秒）
+        String acText = controller.getAllClearText();
+        if (acText != null && !acText.isEmpty()) {
+            g2d.setColor(new Color(255, 255, 200));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 72));
+            FontMetrics fm = g2d.getFontMetrics();
+            int tw = fm.stringWidth(acText);
+            int th = fm.getAscent();
+            int cx = (getWidth() - tw) / 2;
+            int cy = (getHeight() + th) / 2 - 40;
+            g2d.drawString(acText, cx, cy);
+        }
     }
 
     @Override
@@ -346,7 +375,9 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     repaint();
                     break;
                 case KeyEvent.VK_SPACE:
-                    while(down_shift() == 1);
+                    controller.hardDrop();
+                    syncStateFromController();
+                    repaint();
                     break;
                 case KeyEvent.VK_SHIFT: 
                     controller.holdSwap();
