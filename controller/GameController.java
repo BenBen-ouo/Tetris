@@ -77,6 +77,10 @@ public class GameController {
         this.y = 0;
         this.change = 1;
         this.hardDropAllowed = true;
+        // 重置旋轉相關判定，避免上一塊的旋轉狀態影響新方塊
+        this.kickIndexUsed = 0;
+        this.currentTSpin = false;
+        this.cannotDropAfterRotate = false;
     
     // 2. 取出下一個方塊
         if (!nextQueue.isEmpty()) {
@@ -255,6 +259,10 @@ public class GameController {
                 y = 0;
                 turnState = 0;
                 change = 0;
+                // 重置旋轉相關判定，暫存交換後視為新出現的方塊
+                this.kickIndexUsed = 0;
+                this.currentTSpin = false;
+                this.cannotDropAfterRotate = false;
             } else {
                 hold = blockType;
                 newBlock();
