@@ -218,8 +218,8 @@ public class GameController {
         } else if (lastAllClearUntilMs != 0L && System.currentTimeMillis() > lastAllClearUntilMs) {
             lastAllClearUntilMs = 0L;
         }
-        // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin
-        if ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin) {
+        // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin，且排除 O
+        if (blockType != Tetromino.O.ordinal() && ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin)) {
             String name = Tetromino.values()[blockType].name();
             lastSpinText = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
             lastSpinUntilMs = System.currentTimeMillis() + 3000;
@@ -266,8 +266,8 @@ public class GameController {
         } else if (lastAllClearUntilMs != 0L && System.currentTimeMillis() > lastAllClearUntilMs) {
             lastAllClearUntilMs = 0L;
         }
-        // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin
-        if ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin) {
+        // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin，且排除 O
+        if (blockType != Tetromino.O.ordinal() && ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin)) {
             String name = Tetromino.values()[blockType].name();
             lastSpinText = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
             lastSpinUntilMs = System.currentTimeMillis() + 3000;
