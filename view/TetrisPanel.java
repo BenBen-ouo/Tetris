@@ -152,6 +152,9 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         this.alpha = 1.0f;
         repaint();
     }
+    public int getCountdown() {
+        return this.countdown;
+    }
 
     public void startGameFlow(Runnable onFinished) {
         this.startTime = System.currentTimeMillis();
@@ -186,21 +189,28 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         countTimer.start();
     }
     public void resetGame() {
-        this.board = new Board();         // 1. 建立新地圖
-        this.map = board.getMap();        // 2. 更新地圖引用
-        this.controller = new GameController(this.board); // 3. 讓控制器接管新地圖
-        // 控制器建構時已完成清盤與第一個方塊生成，避免重複消耗一塊造成 7-bag 顯示錯亂
-        syncStateFromController();        // 4. 同步目前方塊/預覽/暫存狀態
+        this.board = new Board();
+        this.map = board.getMap();
+        this.controller = new GameController(this.board);
     
+        syncStateFromController();
+
         this.countdown = -1;
         this.alpha = 1.0f;
         this.startTime = System.currentTimeMillis();
+    
+        // 重置遊戲時，隱藏 Home 按鈕 (等待倒數後才出現)
         if (homeButton != null) {
             homeButton.setVisible(false);
         }
         repaint();
     }
-
+        // 在 TetrisPanel.java 類別中新增
+    public boolean isGameOver() {
+        return controller.getFlag() == 1;
+    }
+    
+    
     @Override
     public void paintComponent(Graphics graphics) {
         int offsetX = (getWidth() - TOTAL_W) / 2;
@@ -346,7 +356,22 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     repaint();
                     break;
                 case KeyEvent.VK_SPACE:
-                    while(down_shift() == 1);
+                    // 只有在還沒結束時才執行
+                    if (!isGameOver()) {
+                        while(down_shift() == 1); 
+                        // 強制同步狀態
+                        syncStateFromController();
+                        repaint();
+                        // 關鍵：如果這一下 Space 導致遊戲結束，立刻通知主程式
+                        if (isGameOver()) {
+                            Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
+                            if (frame != null) {
+                    // 停止面板內的任何倒數計時（如果有）
+                                // 並呼叫結束處理
+                                frame.triggerGameOverManually(); 
+                            }
+                        }
+                    }
                     break;
                 case KeyEvent.VK_SHIFT: 
                     controller.holdSwap();
