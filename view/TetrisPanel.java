@@ -30,7 +30,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private long startTime;
     private float alpha = 1.0f;  
     private final int TOTAL_W = 660;
-    private int nextSpacing = 100;
+    private int nextSpacing = 90;
     private JButton homeButton;
 
     // 方塊顏色圖片陣列
@@ -252,13 +252,13 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             for (int i = 0; i < 16; i++) {
                 int[] holdRot = Tetromino.values()[hold].rotation(0);
                 if (holdRot[i] == 1) {
-                     graphics.drawImage(color[hold], (i%4)*33 + 15 + offsetX, (i/4)*33 + 45 + offsetY, null); 
+                     graphics.drawImage(color[hold], (i%4)*33 + 10 + offsetX, (i/4)*33 + 45 + offsetY, null); 
                 }
             }
         }
         // 繪製多個 Next 預覽：同一水平位置，往下堆疊
         List<Integer> nexts = controller.getNextQueue();
-        int previewCount = Math.min(4, nexts.size());
+        int previewCount = Math.min(5, nexts.size());
         for (int j = 0; j < previewCount; j++) {
             int nextType = nexts.get(j);
             int[] nextRot = Tetromino.values()[nextType].rotation(0);
@@ -267,11 +267,27 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     graphics.drawImage(
                         color[nextType],
                         (i%4)*33 + 530 + offsetX,
-                        (i/4)*33 + 3 + 80 + offsetY + j * nextSpacing,
+                        (i/4)*33 + 3 + 60 + offsetY + j * nextSpacing,
                         null
                     );
                 }
             }
+        }
+
+        // 左側顯示最近一次鎖定的 Spin（若有，持續 3 秒）
+        String spinText = controller.getLastSpinText();
+        int baseTextY = offsetY + 220;
+        if (spinText != null && !spinText.isEmpty()) {
+            g2d.setColor(Color.WHITE);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 40));
+            g2d.drawString(spinText, offsetX + 15, baseTextY);
+        }
+        // 在字的下方留間隔顯示 Combo
+        int combo = controller.getCombo();
+        if (combo > 0) {
+            g2d.setColor(new Color(255, 230, 120));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 28));
+            g2d.drawString("Combo x" + combo, offsetX + 15, baseTextY + 40);
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
@@ -315,6 +331,19 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             }
         }
         if (countdown == 5) currentImg = null;
+
+        // 畫面中央顯示 ALL CLEAR（持續 3 秒）
+        String acText = controller.getAllClearText();
+        if (acText != null && !acText.isEmpty()) {
+            g2d.setColor(new Color(255, 255, 200));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 72));
+            FontMetrics fm = g2d.getFontMetrics();
+            int tw = fm.stringWidth(acText);
+            int th = fm.getAscent();
+            int cx = (getWidth() - tw) / 2;
+            int cy = (getHeight() + th) / 2 - 40;
+            g2d.drawString(acText, cx, cy);
+        }
     }
 
     @Override
@@ -356,22 +385,25 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     repaint();
                     break;
                 case KeyEvent.VK_SPACE:
+                    controller.hardDrop();
+                    syncStateFromController();
+                    repaint();
                     // 只有在還沒結束時才執行
-                    if (!isGameOver()) {
-                        while(down_shift() == 1); 
-                        // 強制同步狀態
-                        syncStateFromController();
-                        repaint();
-                        // 關鍵：如果這一下 Space 導致遊戲結束，立刻通知主程式
-                        if (isGameOver()) {
-                            Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
-                            if (frame != null) {
-                    // 停止面板內的任何倒數計時（如果有）
-                                // 並呼叫結束處理
-                                frame.triggerGameOverManually(); 
-                            }
-                        }
-                    }
+//                     if (!isGameOver()) {
+//                         while(down_shift() == 1); 
+//                         // 強制同步狀態
+//                         syncStateFromController();
+//                         repaint();
+//                         // 關鍵：如果這一下 Space 導致遊戲結束，立刻通知主程式
+//                         if (isGameOver()) {
+//                             Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
+//                             if (frame != null) {
+//                     // 停止面板內的任何倒數計時（如果有）
+//                                 // 並呼叫結束處理
+//                                 frame.triggerGameOverManually(); 
+//                             }
+//                         }
+//                     }
                     break;
                 case KeyEvent.VK_SHIFT: 
                     controller.holdSwap();
