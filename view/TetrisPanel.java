@@ -180,12 +180,13 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         Timer countTimer = new Timer(1000, e -> {
             countdown++;
             if(countdown == 4){
-                homeButton.setVisible(true);
+                // homeButton.setVisible(true);
                 repaint();
                 onFinished.run();   
             }
             else if(countdown == 5){
                 ((Timer)e.getSource()).stop(); 
+                homeButton.setVisible(true);
                 repaint();
             }
             else{repaint();}
