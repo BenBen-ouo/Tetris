@@ -4,6 +4,7 @@ import controller.GameController;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.List;
 import javax.swing.*;
 import model.Board;
 import model.Tetromino;
@@ -29,6 +30,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private long startTime;
     private float alpha = 1.0f;  
     private final int TOTAL_W = 660;
+    private int nextSpacing = 100;
     private JButton homeButton;
 
     // 方塊顏色圖片陣列
@@ -60,8 +62,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         board = new Board();
         map = board.getMap();
         controller = new GameController(board);
-        initMap();
-        newBlock();
         hold = controller.getHold();
         next = controller.getNext();
 
@@ -89,15 +89,20 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         this.add(homeButton);
     }
 
+    // 與控制器同步狀態（供繪製與既有流程使用）
+    private void syncStateFromController() {
+        blockType = controller.getBlockType();
+        turnState = controller.getTurnState();
+        x = controller.getX();
+        y = controller.getY();
+        flag = controller.getFlag();
+        next = controller.getNext();
+        hold = controller.getHold();
+    }
+
     // 外部計時器呼叫本方法以驅動遊戲邏輯
     public void tick() {
         controller.tick();
-        syncStateFromController();
-        repaint();
-    }
-
-    public void newBlock() {// 產生新方塊
-        controller.newBlock();
         syncStateFromController();
         repaint();
     }
@@ -117,25 +122,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         return GameController.canPlace(board, x, y, type, state);
     }
 
-    public void rotate() {
-        controller.rotate();
-        syncStateFromController();
-        repaint();
-    }
-
-    public int r_shift() {
-        int moved = controller.r_shift();
-        syncStateFromController();
-        repaint();
-        return moved;
-    }
-
-    public void l_shift() {
-        controller.l_shift();
-        syncStateFromController();
-        repaint();
-    }
-
     public int down_shift() {
         int canDown = controller.down_shift();
         // 若剛固定並產生新方塊，控制器已處理清行與 newBlock
@@ -147,11 +133,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     void delLine() {
         GameController.clearFullLines(board);
         // /*if(access == 1) Sleep(500);*/ 保留暫不實作
-    }
-
-    void initMap() {
-        board.initMap();
-        map = board.getMap();
     }
 
     public void resetAnimation() {
@@ -236,14 +217,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     graphics.drawImage(color[map[i][j]-1], i*30+3*(i+1)+150+offsetX, j*30+3*(j+1)+offsetY, null);
             }
         }
-        // 從控制器讀取目前方塊狀態
-        blockType = controller.getBlockType();
-        turnState = controller.getTurnState();
-        x = controller.getX();
-        y = controller.getY();
-        flag = controller.getFlag();
-        next = controller.getNext();
-        hold = controller.getHold();
+        // 從控制器讀取目前方塊狀態（改用集中方法）
+        syncStateFromController();
 
         if(flag == 0) {
             for (int i = 0; i < 16; i++) {
@@ -261,10 +236,21 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                 }
             }
         }
-        for (int i = 0; i < 16; i++) {
-            int[] nextRot = Tetromino.values()[next].rotation(0);
-            if (nextRot[i] == 1) {
-                graphics.drawImage(color[next], (i%4)*33 + 530 + offsetX, (i/4)*33 + 3 + 80 + offsetY, null);
+        // 繪製多個 Next 預覽：同一水平位置，往下堆疊
+        List<Integer> nexts = controller.getNextQueue();
+        int previewCount = Math.min(4, nexts.size());
+        for (int j = 0; j < previewCount; j++) {
+            int nextType = nexts.get(j);
+            int[] nextRot = Tetromino.values()[nextType].rotation(0);
+            for (int i = 0; i < 16; i++) {
+                if (nextRot[i] == 1) {
+                    graphics.drawImage(
+                        color[nextType],
+                        (i%4)*33 + 530 + offsetX,
+                        (i/4)*33 + 3 + 80 + offsetY + j * nextSpacing,
+                        null
+                    );
+                }
             }
         }
 
@@ -311,17 +297,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         if (countdown == 5) currentImg = null;
     }
 
-    // 與控制器同步狀態（供繪製與既有流程使用）
-    private void syncStateFromController() {
-        blockType = controller.getBlockType();
-        turnState = controller.getTurnState();
-        x = controller.getX();
-        y = controller.getY();
-        flag = controller.getFlag();
-        next = controller.getNext();
-        hold = controller.getHold();
-    }
-
     @Override
     public void keyReleased(KeyEvent e) {}
 
@@ -336,13 +311,29 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     down_shift();
                     break;
                 case KeyEvent.VK_UP:
-                    rotate();
+                    controller.rotateClockwise();
+                    syncStateFromController();
+                    repaint();
+                    break;
+                case KeyEvent.VK_X: // X 順時針旋轉，與上方向鍵一致
+                    controller.rotateClockwise();
+                    syncStateFromController();
+                    repaint();
+                    break;
+                case KeyEvent.VK_Z: // Z 逆時針旋轉，取前一個旋轉狀態
+                    controller.rotateCounterclockwise();
+                    syncStateFromController();
+                    repaint();
                     break;
                 case KeyEvent.VK_RIGHT:
-                    r_shift();
+                    controller.r_shift();
+                    syncStateFromController();
+                    repaint();
                     break;
                 case KeyEvent.VK_LEFT:
-                    l_shift();
+                    controller.l_shift();
+                    syncStateFromController();
+                    repaint();
                     break;
                 case KeyEvent.VK_SPACE:
                     while(down_shift() == 1);
@@ -357,12 +348,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         else{return;}
     }
 
-    void Sleep(int milliseconds) {
-        try {
-            Thread.sleep(milliseconds);
-        } catch (InterruptedException e) {
-            System.out.println("Unexcepted interrupt");
-            System.exit(0);
-        }
-    }
+    // void Sleep(int milliseconds) {
+    //     try {
+    //         Thread.sleep(milliseconds);
+    //     } catch (InterruptedException e) {
+    //         System.out.println("Unexcepted interrupt");
+    //         System.exit(0);
+    //     }
+    // }
 }
