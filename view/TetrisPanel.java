@@ -12,12 +12,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     public int[][] map = new int [10][20]; // 10寬 20高（初始化後會指向 Board 的 map）
     private Board board; // 盤面資料來源
     // 轉為由 GameController 管理狀態
-    private final GameController controller;
+    private GameController controller;
     private int blockType; // 暫存繪製使用（由 controller 取得）
     private int turnState; // 暫存繪製使用（由 controller 取得）
     private int x, y, hold, next; // 暫存繪製（由 controller 取得）
     private int flag = 0; // 與舊程式相容（由 controller 提供）
-    Image currentImg = null;
+    static Image currentImg = null;
     private final Image b1;
     private final Image b2;
     private final Image holdPhoto;
@@ -25,11 +25,11 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private final Image startPhoto;
     private final Image backgroundImage;
     private final Image img3, img2, img1, imgGo;
-    private int countdown = -1;// -1表示倒數還沒有開始
+    int countdown = -1;// -1表示倒數還沒有開始
     private long startTime;
     private float alpha = 1.0f;  
-       // 目前的透明度 (1.0 = 不透明, 0.0 = 全透明)
     private final int TOTAL_W = 660;
+    private JButton homeButton;
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -57,17 +57,36 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         color[5] = Toolkit.getDefaultToolkit().getImage("image/orange.png");
         color[6] = Toolkit.getDefaultToolkit().getImage("image/pink.png");
         
-        // 初始化 Board 與 map
         board = new Board();
         map = board.getMap();
         controller = new GameController(board);
-        initMap(); // 初始化地圖
-        // 由控制器初始化新方塊
+        initMap();
         newBlock();
         hold = controller.getHold();
         next = controller.getNext();
 
-        // 計時器不在面板內管理，由外部 TimerService 呼叫 tick()
+        homeButton = new JButton("Home");
+        homeButton.setFont(new Font("SansSerif", Font.BOLD, 12));
+        homeButton.setBounds(10, 10, 80, 50);
+        homeButton.setVisible(false);
+        homeButton.addActionListener(e -> {
+
+        Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
+            frame.showStartScreen();
+        });
+        homeButton.setFocusPainted(false);
+        homeButton.setOpaque(true); // 確保背景顏色能顯示
+        homeButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                homeButton.setBackground(Color.DARK_GRAY); // 滑鼠進入時變色
+                homeButton.setForeground(Color.WHITE);
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                homeButton.setBackground(UIManager.getColor("Button.background")); // 滑鼠離開時變回原色
+                homeButton.setForeground(Color.BLACK);
+            }
+        });
+        this.add(homeButton);
     }
 
     // 外部計時器呼叫本方法以驅動遊戲邏輯
@@ -161,16 +180,34 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         Timer countTimer = new Timer(1000, e -> {
             countdown++;
             if(countdown == 4){
+                // homeButton.setVisible(true);
                 repaint();
                 onFinished.run();   
             }
             else if(countdown == 5){
                 ((Timer)e.getSource()).stop(); 
+                homeButton.setVisible(true);
                 repaint();
             }
             else{repaint();}
         });
         countTimer.start();
+    }
+    public void resetGame() {
+        this.board = new Board();         // 1. 建立新地圖
+        this.map = board.getMap();        // 2. 更新地圖引用
+        this.controller = new GameController(this.board); // 3. 讓控制器接管新地圖
+    
+        this.initMap(); 
+        this.newBlock();                  // 4. 產生第一個方塊
+    
+        this.countdown = -1;
+        this.alpha = 1.0f;
+        this.startTime = System.currentTimeMillis();
+        if (homeButton != null) {
+            homeButton.setVisible(false);
+        }
+        repaint();
     }
 
     @Override

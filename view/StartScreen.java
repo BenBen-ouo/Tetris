@@ -13,10 +13,6 @@ public class StartScreen extends JPanel {
 
         this.setLayout(new GridBagLayout());
         
-        JLabel titleLabel = new JLabel("TETRIS GAME");
-        titleLabel.setFont(new Font("SansSerif", Font.CENTER_BASELINE, 70));
-        titleLabel.setForeground(Color.WHITE);
-
         JButton startButton = new JButton("START GAME");
         startButton.setFont(new Font("SansSerif", Font.BOLD, 30));
         startButton.setPreferredSize(new Dimension(300, 80));
@@ -38,12 +34,8 @@ public class StartScreen extends JPanel {
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 50, 0);
-        add(titleLabel, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(0, 0, 0, 0);
+        gbc.gridy = 1; // 下移，給手畫的標題留空間
+        gbc.insets = new Insets(200, 0, 0, 0); // 這裡的 Top Inset 要大一點，避開手畫的文字
         add(startButton, gbc);
     }
     @Override
@@ -66,9 +58,32 @@ public class StartScreen extends JPanel {
             int x = (getWidth() - imgW) / 2;
             int y = (getHeight() - imgH) / 2-100;
 
-            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f));
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.45f));
             g2d.drawImage(startBackground, x, y, imgW, imgH, this);
         }
         g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
+        drawGlowText(g2d, "TETRIS GAME", getWidth() / 2, getHeight() / 2 );
     }
+
+    private void drawGlowText(Graphics2D g2d, String text, int x, int y) {
+        Font font = new Font("SansSerif", Font.BOLD, 80);
+        g2d.setFont(font);
+        FontMetrics fm = g2d.getFontMetrics();
+        int textWidth = fm.stringWidth(text);
+        int drawX = x - (textWidth / 2);
+        int drawY = y;
+
+        Color glowColor = new Color(153, 50, 204, 50);
+        for (int i = 5; i > 0; i--) {
+            g2d.setColor(glowColor);
+            // 透過微小的偏移和描邊來模擬發光
+            g2d.drawString(text, drawX - i, drawY - i);
+            g2d.drawString(text, drawX + i, drawY + i);
+            g2d.drawString(text, drawX - i, drawY + i);
+            g2d.drawString(text, drawX + i, drawY - i);
+        }
+        g2d.setColor(Color.WHITE);
+        g2d.drawString(text, drawX, drawY);
+    }
+    
 }
