@@ -44,7 +44,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         b2 = Toolkit.getDefaultToolkit().getImage("image/background2.png");
         holdPhoto = Toolkit.getDefaultToolkit().getImage("image/tetris_grid_Hold.png");
         nextPhoto = Toolkit.getDefaultToolkit().getImage("image/tetris_grid_Next.png");
-        startPhoto = Toolkit.getDefaultToolkit().getImage("image/blitz_banner.png");
+        startPhoto = Toolkit.getDefaultToolkit().getImage("image/custom_game.png");
         startTime = System.currentTimeMillis();
         img1 = Toolkit.getDefaultToolkit().getImage("image/countdown_one.png");
         img2 = Toolkit.getDefaultToolkit().getImage("image/countdown_two.png");
@@ -266,8 +266,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
         long elapsed = System.currentTimeMillis() - startTime;
     
-        int imgX = (getWidth() - 700) / 2;
-        int imgY = getHeight() - 70 - 60;
+        // int imgX = (getWidth() - 700) / 2;
+        // int imgY = getHeight() - 70 - 60;
 
         if (elapsed > 2000) {
             // 2秒後開始每秒減少透明度
@@ -278,7 +278,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         if (alpha > 0) {
             // 套用透明度並繪製
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            g2d.drawImage(startPhoto, imgX, imgY, 700, 70, this);
+            g2d.drawImage(startPhoto, 320, 300, 445, 100, this);
             
             // 繪製完畢必須重設透明度，以免影響下一輪繪圖
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
