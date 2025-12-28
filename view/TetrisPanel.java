@@ -32,6 +32,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private final int TOTAL_W = 660;
     private int nextSpacing = 90;
     private JButton homeButton;
+    // 空白鍵長按防連續觸發（需放開才可再觸發）
+    private boolean spaceHeld = false;
+    // 旋轉鍵長按防連續觸發（UP/X 為順時針，Z 為逆時針）
+    private boolean upHeld = false;
+    private boolean xHeld = false;
+    private boolean zHeld = false;
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -207,7 +213,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     }
         // 在 TetrisPanel.java 類別中新增
     public boolean isGameOver() {
-        return controller.getFlag() == 1;
+        return controller.isGameOver();
     }
     
     
@@ -291,9 +297,6 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
-    
-        // int imgX = (getWidth() - 700) / 2;
-        // int imgY = getHeight() - 70 - 60;
 
         if (elapsed > 2000) {
             // 2秒後開始每秒減少透明度
@@ -347,7 +350,18 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     }
 
     @Override
-    public void keyReleased(KeyEvent e) {}
+    public void keyReleased(KeyEvent e) {
+        int code = e.getKeyCode();
+        if (code == KeyEvent.VK_SPACE) {
+            spaceHeld = false;
+        } else if (code == KeyEvent.VK_UP) {
+            upHeld = false;
+        } else if (code == KeyEvent.VK_X) {
+            xHeld = false;
+        } else if (code == KeyEvent.VK_Z) {
+            zHeld = false;
+        }
+    }
 
     @Override
     public void keyTyped(KeyEvent e) {}
@@ -360,19 +374,28 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     down_shift();
                     break;
                 case KeyEvent.VK_UP:
-                    controller.rotateClockwise();
-                    syncStateFromController();
-                    repaint();
+                    if (!upHeld) {
+                        upHeld = true;
+                        controller.rotateClockwise();
+                        syncStateFromController();
+                        repaint();
+                    }
                     break;
                 case KeyEvent.VK_X: // X 順時針旋轉，與上方向鍵一致
-                    controller.rotateClockwise();
-                    syncStateFromController();
-                    repaint();
+                    if (!xHeld) {
+                        xHeld = true;
+                        controller.rotateClockwise();
+                        syncStateFromController();
+                        repaint();
+                    }
                     break;
                 case KeyEvent.VK_Z: // Z 逆時針旋轉，取前一個旋轉狀態
-                    controller.rotateCounterclockwise();
-                    syncStateFromController();
-                    repaint();
+                    if (!zHeld) {
+                        zHeld = true;
+                        controller.rotateCounterclockwise();
+                        syncStateFromController();
+                        repaint();
+                    }
                     break;
                 case KeyEvent.VK_RIGHT:
                     controller.r_shift();
@@ -385,9 +408,12 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     repaint();
                     break;
                 case KeyEvent.VK_SPACE:
-                    controller.hardDrop();
-                    syncStateFromController();
-                    repaint();
+                    if (!spaceHeld) {
+                        spaceHeld = true;
+                        controller.hardDrop();
+                        syncStateFromController();
+                        repaint();
+                    }
                     // 只有在還沒結束時才執行
 //                     if (!isGameOver()) {
 //                         while(down_shift() == 1); 

@@ -34,6 +34,10 @@ public class GameController {
     private boolean cannotDropAfterRotate = false;
     // ALL CLEAR 顯示：到期時間 TTL（毫秒），在面板中央顯示 3 秒
     private long lastAllClearUntilMs = 0L;
+    // 每塊方塊僅允許一次硬降
+    private boolean hardDropAllowed = true;
+    // 遊戲結束狀態（觸發於鎖定後占用到最上兩層中間四格的八格）
+    private boolean gameOver = false;
 
     public GameController(Board board) {
         this.board = board;
@@ -66,11 +70,13 @@ public class GameController {
     public int getChange() { return change; }
 
     public void newBlock() {
+        if (gameOver) return; // 遊戲已結束，不再產生新方塊
         // 1. 取得新方塊前，先重設座標與狀態
         this.turnState = 0;
         this.x = 3; 
         this.y = 0;
         this.change = 1;
+        this.hardDropAllowed = true;
     
     // 2. 取出下一個方塊
         if (!nextQueue.isEmpty()) {
@@ -205,10 +211,18 @@ public class GameController {
 
     // 空白鍵：硬降，直接落到底並立即鎖定（不套用 lock delay）
     public void hardDrop() {
+        if (gameOver) return;
+        if (!hardDropAllowed) return;
+        hardDropAllowed = false;
         while (canPlace(x, y + 1, blockType, turnState) == 1) {
             y++;
         }
         setBlock(x, y, blockType, turnState);
+        // 鎖定後先檢查最上兩層中間四格是否有被占用，若有則結束遊戲
+        if (isTopCenterOccupied()) {
+            gameOver = true;
+            return;
+        }
         int cleared = board.clearFullLines();
         // Combo：連續有消行則累加，沒消行則設為-1
         combo = (cleared > 0) ? (combo + 1) : -1;
@@ -251,12 +265,18 @@ public class GameController {
 
     // 計時器集中化預留：之後由 TimerService 或控制器驅動 tick
     public void tick() {
+        if (gameOver) return;
         // 能下落則下落；不能下落則在該 tick 立即固定
         if (canPlace(x, y + 1, blockType, turnState) == 1) {
             y++;
             return;
         }
         setBlock(x, y, blockType, turnState);
+        // 鎖定後先檢查最上兩層中間四格是否有被占用，若有則結束遊戲
+        if (isTopCenterOccupied()) {
+            gameOver = true;
+            return;
+        }
         int cleared = board.clearFullLines();
         // Combo：連續有消行則累加，沒消行則設為-1
         combo = (cleared > 0) ? (combo + 1) : -1;
@@ -289,6 +309,8 @@ public class GameController {
         return (System.currentTimeMillis() <= lastAllClearUntilMs) ? "ALL CLEAR" : "";
     }
 
+    public boolean isGameOver() { return gameOver; }
+
     // T-Spin 檢測：僅在當前方塊為 T，且無法再下落，且四角至少三格為填滿（出界視為填滿）
     private boolean detectTSpin() {
         if (blockType != Tetromino.T.ordinal()) return false;
@@ -316,6 +338,16 @@ public class GameController {
             }
         }
         return true;
+    }
+
+    // 檢查最上兩層（y=0,1）中間四格寬（x=3,4,5,6）是否有任何占用
+    private boolean isTopCenterOccupied() {
+        for (int py = 0; py <= 1; py++) {
+            for (int px = 3; px <= 6; px++) {
+                if (board.getCell(px, py) != 0) return true;
+            }
+        }
+        return false;
     }
 
     public static int canPlace(Board board, int x, int y, int type, int state) {
