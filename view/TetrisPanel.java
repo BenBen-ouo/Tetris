@@ -107,6 +107,17 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         repaint();
     }
 
+    void initMap() { //少用，若用可用syncStateFromController
+        board.initMap();
+        map = board.getMap();
+    }
+    
+    public void newBlock() { //少用，若用可用syncStateFromController
+        controller.newBlock();
+        syncStateFromController();
+        repaint();
+    }
+
     public void setBlock(int x, int y, int type, int state) {// 固定方塊到地圖上
         flag = 1;
         GameController.setBlock(board, x, y, type, state);
@@ -178,9 +189,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         this.board = new Board();         // 1. 建立新地圖
         this.map = board.getMap();        // 2. 更新地圖引用
         this.controller = new GameController(this.board); // 3. 讓控制器接管新地圖
-    
-        this.initMap(); 
-        this.newBlock();                  // 4. 產生第一個方塊
+        // 控制器建構時已完成清盤與第一個方塊生成，避免重複消耗一塊造成 7-bag 顯示錯亂
+        syncStateFromController();        // 4. 同步目前方塊/預覽/暫存狀態
     
         this.countdown = -1;
         this.alpha = 1.0f;
