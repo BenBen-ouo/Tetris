@@ -30,7 +30,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private long startTime;
     private float alpha = 1.0f;  
     private final int TOTAL_W = 660;
-    private int nextSpacing = 100;
+    private int nextSpacing = 90;
     private JButton homeButton;
 
     // 方塊顏色圖片陣列
@@ -242,13 +242,13 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             for (int i = 0; i < 16; i++) {
                 int[] holdRot = Tetromino.values()[hold].rotation(0);
                 if (holdRot[i] == 1) {
-                     graphics.drawImage(color[hold], (i%4)*33 + 15 + offsetX, (i/4)*33 + 45 + offsetY, null); 
+                     graphics.drawImage(color[hold], (i%4)*33 + 10 + offsetX, (i/4)*33 + 45 + offsetY, null); 
                 }
             }
         }
         // 繪製多個 Next 預覽：同一水平位置，往下堆疊
         List<Integer> nexts = controller.getNextQueue();
-        int previewCount = Math.min(4, nexts.size());
+        int previewCount = Math.min(5, nexts.size());
         for (int j = 0; j < previewCount; j++) {
             int nextType = nexts.get(j);
             int[] nextRot = Tetromino.values()[nextType].rotation(0);
@@ -257,7 +257,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     graphics.drawImage(
                         color[nextType],
                         (i%4)*33 + 530 + offsetX,
-                        (i/4)*33 + 3 + 80 + offsetY + j * nextSpacing,
+                        (i/4)*33 + 3 + 60 + offsetY + j * nextSpacing,
                         null
                     );
                 }

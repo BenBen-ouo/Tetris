@@ -38,8 +38,8 @@ public class GameController {
     public GameController(Board board) {
         this.board = board;
         this.board.initMap();
-        // 初始化預覽佇列，預設顯示 4 個
-        for (int i = 0; i < 4; i++) {
+        // 初始化預覽佇列，預設決定 5 個（含畫面顯示的前五個順序）
+        for (int i = 0; i < 5; i++) {
             nextQueue.addLast(generator.next());
         }
         newBlock();
@@ -73,7 +73,7 @@ public class GameController {
         // 維持預覽佇列長度：補上一個新生成的方塊
         nextQueue.addLast(generator.next());
         turnState = 0;
-        x = 4; y = 0;
+        x = 3; y = 0;
         kickIndexUsed = 0;
         currentTSpin = false;
         cannotDropAfterRotate = false;
@@ -230,7 +230,7 @@ public class GameController {
                 int tmp = hold;
                 hold = blockType;
                 blockType = tmp;
-                x = 4;
+                x = 3;
                 y = 0;
                 turnState = 0;
                 change = 0;
