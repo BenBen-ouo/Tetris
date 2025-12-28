@@ -26,6 +26,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private final Image startPhoto;
     private final Image backgroundImage;
     private final Image img3, img2, img1, imgGo;
+    private final Image controlsImage;
     int countdown = -1;// -1表示倒數還沒有開始
     private long startTime;
     private float alpha = 1.0f;  
@@ -51,6 +52,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         img3 = Toolkit.getDefaultToolkit().getImage("image/countdown_three.png");
         imgGo = Toolkit.getDefaultToolkit().getImage("image/countdown_go.png");
         backgroundImage = Toolkit.getDefaultToolkit().getImage("image/background_gamepage.jpg");
+        controlsImage = Toolkit.getDefaultToolkit().getImage("image/keyboard_operation.jpg");
         color[0] = Toolkit.getDefaultToolkit().getImage("image/blue.png");
         color[1] = Toolkit.getDefaultToolkit().getImage("image/green.png");
         color[2] = Toolkit.getDefaultToolkit().getImage("image/red.png");
@@ -226,6 +228,10 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
         g2d.setComposite(oldComposite);
 
+        g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.7f));
+        g2d.drawImage(controlsImage, offsetX + 500, offsetY + 570, 368, 110, this);
+        g2d.setComposite(oldComposite);
+
         for(int i = 0; i < 10; i++) {
             for(int j = 0; j < 20; j++) {
                 if(map[i][j] == 0) {
@@ -304,7 +310,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         if (alpha > 0) {
             // 套用透明度並繪製
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-            g2d.drawImage(startPhoto, 320, 300, 445, 100, this);
+            g2d.drawImage(startPhoto, 180, 120, 768, 512, this);
             
             // 繪製完畢必須重設透明度，以免影響下一輪繪圖
             g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f));
@@ -345,6 +351,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             g2d.drawString(acText, cx, cy);
         }
     }
+    
 
     @Override
     public void keyReleased(KeyEvent e) {}
