@@ -6,6 +6,7 @@ import java.util.Deque;
 import java.util.List;
 import model.Board;
 import model.PieceGenerator;
+import model.SRSSystem;
 import model.Tetromino;
 
 // 單一局遊戲狀態與邏輯：方塊生成、移動、旋轉、落下、固定、檢查
@@ -46,7 +47,7 @@ public class GameController {
     public int getY() { return y; }
     public int getHold() { return hold; }
     // 與舊介面相容：回傳第一個預覽
-    public int getNext() { return nextQueue.isEmpty() ? -1 : nextQueue.peekFirst(); }
+    public int getNext() { return nextQueue.isEmpty() ? -1 : nextQueue.peekFirst().intValue(); }
     // 新增：取得全部預覽佇列（複本，避免外部修改）
     public List<Integer> getNextQueue() { return new ArrayList<>(nextQueue); }
     public int getFlag() { return flag; }
@@ -97,18 +98,48 @@ public class GameController {
     }
 
     public void rotateClockwise() {
-        int tmpState = (turnState + 1) % 4; // 目前先維持原本順時針一段
-        if (canPlace(x, y, blockType, tmpState) == 1) {
-            turnState = tmpState;
+        int toState = (turnState + 1) % 4;
+        // 直接可放置：旋轉成功
+        if (canPlace(x, y, blockType, toState) == 1) {
+            turnState = toState;
+            return;
         }
+        // 嘗試 SRS 踢牆（O 不使用踢牆表）
+        int[][] kicks = SRSSystem.getKicks(blockType, turnState, toState);
+        for (int[] k : kicks) {
+            int nx = x + k[0];
+            int ny = y + k[1];
+            if (canPlace(nx, ny, blockType, toState) == 1) {
+                x = nx;
+                y = ny;
+                turnState = toState;
+                return;
+            }
+        }
+        // 全部失敗：不旋轉
     }
 
     // 逆時針旋轉（Z）：取前一個旋轉狀態
     public void rotateCounterclockwise() {
-        int tmpState = (turnState + 3) % 4; // 等同於 (turnState - 1 + 4) % 4
-        if (canPlace(x, y, blockType, tmpState) == 1) {
-            turnState = tmpState;
+        int toState = (turnState + 3) % 4; // 等同於 (turnState - 1 + 4) % 4
+        // 直接可放置：旋轉成功
+        if (canPlace(x, y, blockType, toState) == 1) {
+            turnState = toState;
+            return;
         }
+        // 嘗試 SRS 踢牆（O 不使用踢牆表）
+        int[][] kicks = SRSSystem.getKicks(blockType, turnState, toState);
+        for (int[] k : kicks) {
+            int nx = x + k[0];
+            int ny = y + k[1];
+            if (canPlace(nx, ny, blockType, toState) == 1) {
+                x = nx;
+                y = ny;
+                turnState = toState;
+                return;
+            }
+        }
+        // 全部失敗：不旋轉
     }
 
     public void r_shift() {
