@@ -293,7 +293,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         String spinText = controller.getLastSpinText();
         int baseTextY = offsetY + 220;
         if (spinText != null && !spinText.isEmpty()) {
-            g2d.setColor(Color.WHITE);
+            g2d.setColor(Color.MAGENTA);
             g2d.setFont(new Font("SansSerif", Font.BOLD, 40));
             g2d.drawString(spinText, offsetX + 15, baseTextY);
         }
@@ -302,7 +302,14 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         if (combo > 0) {
             g2d.setColor(new Color(255, 230, 120));
             g2d.setFont(new Font("SansSerif", Font.BOLD, 28));
-            g2d.drawString("Combo x" + combo, offsetX + 15, baseTextY + 40);
+            g2d.drawString("Combo x" + combo, offsetX, baseTextY + 60);
+        }
+        // 顯示消除行訊息（1/2/3 lines 或 Tetris）
+        String lcText = controller.getLineClearText();
+        if (lcText != null && !lcText.isEmpty()) {
+            g2d.setColor(new Color(120, 220, 255));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 36));
+            g2d.drawString(lcText, offsetX + 15, baseTextY + 120);
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
