@@ -39,6 +39,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
     private boolean upHeld = false;
     private boolean xHeld = false;
     private boolean zHeld = false;
+    private final GhostPieceRenderer ghostRenderer = new GhostPieceRenderer();
 
     // 方塊顏色圖片陣列
     private final Image[] color = new Image[7];
@@ -253,6 +254,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         syncStateFromController();
 
         if(flag == 0) {
+            ghostRenderer.render(g2d, board, controller, x, y, blockType, turnState, color, offsetX, offsetY);
+            
             for (int i = 0; i < 16; i++) {
                 int[] rotation = Tetromino.values()[blockType].rotation(turnState);
                 if (rotation[i] == 1) {
