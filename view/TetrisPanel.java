@@ -250,6 +250,15 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                     graphics.drawImage(color[map[i][j]-1], i*30+3*(i+1)+150+offsetX, j*30+3*(j+1)+offsetY, null);
             }
         }
+        // 畫出紅色死亡線：位於第 (minAllowedRow-1) 與 minAllowedRow 之間的中線
+        int minRow = controller.getMinAllowedRow(); // 0-based；初始為 2（只允許以下18行）
+        int boardLeftX = 150 + offsetX + 3;
+        int boardRightX = (9 * 33 + 3 + 150 + offsetX) + 30; // 最右邊格子的右緣
+        int boardWidth = boardRightX - boardLeftX;
+        int topYOfMinRow = minRow * 33 + 17 + offsetY; // 第 minRow 行的頂端像素
+        int yLine = topYOfMinRow - 16; // 與上一行的中線（約略半格）
+        g2d.setColor(new Color(220, 30, 30));
+        g2d.fillRect(boardLeftX, yLine, boardWidth, 2);
         // 從控制器讀取目前方塊狀態（改用集中方法）
         syncStateFromController();
 
