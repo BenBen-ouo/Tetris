@@ -36,6 +36,8 @@ public class GameController {
     private boolean gameOver = false;
     // 動態死亡線：僅允許死亡線以下的行可放方塊（0-based）。初始為 2（僅允許以下 18 行）。
     private int minAllowedRow = 2;
+    // 普通模式：每放好三個方塊下降一格的計數器
+    private int normalLocksCounter = 0;
     // 四格寬模式（Narrow Mode）
     private boolean narrowMode = false;
     private int[][] backupMap = null; // 進入四格寬前的盤面備份（恢復 10x20 用）
@@ -278,18 +280,26 @@ public class GameController {
         }
         int cleared = narrowMode ? clearFullLinesNarrow() : board.clearFullLines();
         if (!narrowMode) {
-            // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
-            if (cleared > 0) {
-                int before = minAllowedRow;
-                minAllowedRow = Math.min(10, minAllowedRow + cleared);
-                // 觸發進入四格寬模式
-                if (!narrowMode && before < 10 && minAllowedRow >= 10) {
-                    scheduleEnterNarrowMode();
-                }
-                // 判定線往下移動後，立即判斷是否遊戲結束
-                if (minAllowedRow > before && isAboveDeathLineOccupied()) {
-                    gameOver = true;
-                    return;
+            // 新規則：每放好三個方塊下降一格；若消除四行（Tetris），紅線上移兩格並重置計數
+            boolean isTetris = (cleared == 4);
+            if (isTetris) {
+                minAllowedRow = Math.max(2, minAllowedRow - 2); // 上限為 18 行（minAllowedRow=2）
+                normalLocksCounter = 0; // 重新計算新的三個方塊
+                // 上移不需立即判斷結束（風險下降）
+            } else {
+                normalLocksCounter += 1;
+                if (normalLocksCounter >= 3) {
+                    int before = minAllowedRow;
+                    minAllowedRow = Math.min(10, minAllowedRow + 1);
+                    normalLocksCounter = 0;
+                    if (!narrowMode && before < 10 && minAllowedRow >= 10) {
+                        scheduleEnterNarrowMode();
+                    }
+                    // 紅線往下移動後，立即判斷是否遊戲結束
+                    if (minAllowedRow > before && isAboveDeathLineOccupied()) {
+                        gameOver = true;
+                        return;
+                    }
                 }
             }
         } else {
@@ -492,17 +502,24 @@ public class GameController {
         }
         int cleared = narrowMode ? clearFullLinesNarrow() : board.clearFullLines();
         if (!narrowMode) {
-            // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
-            if (cleared > 0) {
-                int before = minAllowedRow;
-                minAllowedRow = Math.min(10, minAllowedRow + cleared);
-                if (!narrowMode && before < 10 && minAllowedRow >= 10) {
-                    scheduleEnterNarrowMode();
-                }
-                // 判定線往下移動後，立即判斷是否遊戲結束
-                if (minAllowedRow > before && isAboveDeathLineOccupied()) {
-                    gameOver = true;
-                    return;
+            // 新規則：每放好三個方塊下降一格；若消除四行（Tetris），紅線上移兩格並重置計數
+            boolean isTetris = (cleared == 4);
+            if (isTetris) {
+                minAllowedRow = Math.max(2, minAllowedRow - 2);
+                normalLocksCounter = 0;
+            } else {
+                normalLocksCounter += 1;
+                if (normalLocksCounter >= 3) {
+                    int before = minAllowedRow;
+                    minAllowedRow = Math.min(10, minAllowedRow + 1);
+                    normalLocksCounter = 0;
+                    if (!narrowMode && before < 10 && minAllowedRow >= 10) {
+                        scheduleEnterNarrowMode();
+                    }
+                    if (minAllowedRow > before && isAboveDeathLineOccupied()) {
+                        gameOver = true;
+                        return;
+                    }
                 }
             }
         } else {
@@ -619,6 +636,8 @@ public class GameController {
         notification.setCombo(0);
         narrowFirstClearOccurred = false;
         narrowComboCount = 0;
+        // 普通模式鎖定計數器歸零（離開普通模式）
+        normalLocksCounter = 0;
         // 先刪除滿四格寬（x=3..6 皆非 0）的列；僅壓縮中間四欄
         clearFullLinesNarrow();
     }
