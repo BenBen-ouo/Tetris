@@ -239,7 +239,10 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         g2d.drawImage(controlsImage, offsetX + 500, offsetY + 570, 368, 110, this);
         g2d.setComposite(oldComposite);
 
+        // 注意：面板內畫面寬度控制由 controller 的 isNarrowMode 與 shouldHideOuterColumns 共同決定
         for(int i = 0; i < 10; i++) {
+            boolean hideSidesNow = ((controller.isNarrowMode() && !controller.shouldForceShowOuterColumns()) || controller.shouldHideOuterColumns());
+            if (hideSidesNow && (i < 3 || i > 6)) continue; // 窄化或過渡時不渲染外側
             for(int j = 0; j < 20; j++) {
                 if(map[i][j] == 0) {
                     if((i+j)%2 == 0)
@@ -253,12 +256,19 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         // 畫出紅色死亡線：位於第 (minAllowedRow-1) 與 minAllowedRow 之間的中線
         int minRow = controller.getMinAllowedRow(); // 0-based；初始為 2（只允許以下18行）
         int boardLeftX = 150 + offsetX + 3;
-        int boardRightX = (9 * 33 + 3 + 150 + offsetX) + 30; // 最右邊格子的右緣
-        int boardWidth = boardRightX - boardLeftX;
+            int fullRightX = (9 * 33 + 3 + 150 + offsetX) + 30; // 全寬最右緣
+            int boardWidth = fullRightX - boardLeftX;
+            int redLeftX = boardLeftX;
+            int redWidth = boardWidth;
+            boolean hideSides = (controller.isNarrowMode() && !controller.shouldForceShowOuterColumns()) || controller.shouldHideOuterColumns();
+            if (hideSides) {
+                redLeftX = boardLeftX + 3 * 33;
+                redWidth = 4 * 33 - 3;
+            }
         int topYOfMinRow = minRow * 33 + 17 + offsetY; // 第 minRow 行的頂端像素
         int yLine = topYOfMinRow - 16; // 與上一行的中線（約略半格）
         g2d.setColor(new Color(220, 30, 30));
-        g2d.fillRect(boardLeftX, yLine, boardWidth, 2);
+        g2d.fillRect(redLeftX, yLine, redWidth, 2);
         // 從控制器讀取目前方塊狀態（改用集中方法）
         syncStateFromController();
 
@@ -319,6 +329,16 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             g2d.setColor(new Color(120, 220, 255));
             g2d.setFont(new Font("SansSerif", Font.BOLD, 36));
             g2d.drawString(lcText, offsetX + 15, baseTextY + 120);
+        }
+        // 四格寬模式提示（左下角）
+        if (controller.isNarrowMode() && controller.shouldShowNarrowLabel()) {
+            g2d.setColor(new Color(255, 100, 100));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 36));
+            int labelY = offsetY + 20 * 33 - 150;
+            g2d.drawString("Narrow Mode", offsetX, labelY);
+            g2d.setColor(new Color(255, 220, 120));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 30));
+            g2d.drawString("Try combo x5", offsetX + 20, labelY + 35);
         }
 
         long elapsed = System.currentTimeMillis() - startTime;
@@ -394,6 +414,9 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
 
     @Override
     public void keyPressed(KeyEvent e) {
+        if (controller.isFrozen()) {
+            return; // 模式切換過渡期間不接受鍵盤事件
+        }
         if(countdown == 5){
             switch (e.getKeyCode()) {
                 case KeyEvent.VK_DOWN:

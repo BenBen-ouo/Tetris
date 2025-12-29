@@ -36,6 +36,21 @@ public class GameController {
     private boolean gameOver = false;
     // 動態死亡線：僅允許死亡線以下的行可放方塊（0-based）。初始為 2（僅允許以下 18 行）。
     private int minAllowedRow = 2;
+    // 四格寬模式（Narrow Mode）
+    private boolean narrowMode = false;
+    private int[][] backupMap = null; // 進入四格寬前的盤面備份（恢復 10x20 用）
+    private boolean narrowFirstClearOccurred = false; // 進入四格寬後的第一次消行不算 combo
+    private int narrowComboCount = 0; // 第一次消行後連續消行的次數（達 5 即退出四格寬）
+    // 全域連續消行計數（第二次連消才顯示 combo x1）
+    private int consecutiveClears = 0;
+    // 模式切換三階段：2=第一個凍結tick(不動)、1=第二個凍結tick(僅隱藏左右)、0=恢復
+    private int transitionStage = 0;
+    private boolean transitionEntering = false;
+    private boolean hideOuterDuringTransition = false; // 第二個tick隱藏左右欄
+    private boolean showNarrowLabel = false; // 進入第三個tick才顯示字串
+    private boolean forceShowOuterDuringTransition = false; // 退出窄化第二個tick顯示左右欄
+    private boolean pendingCommitEnter = false;
+    private boolean pendingCommitExit = false;
 
     public GameController(Board board) {
         this.board = board;
@@ -61,13 +76,21 @@ public class GameController {
     public int getY() { return y; }
     public int getHold() { return hold; }
     // 與舊介面相容：回傳第一個預覽
-    public int getNext() { return nextQueue.isEmpty() ? -1 : nextQueue.peekFirst(); }
+    public int getNext() {
+        Integer v = nextQueue.peekFirst();
+        return v == null ? -1 : v;
+    }
     // 新增：取得全部預覽佇列（複本，避免外部修改）
     public List<Integer> getNextQueue() { return new ArrayList<>(nextQueue); }
     public int getFlag() { return flag; }
     public int getChange() { return change; }
     public Notification getNotification() { return notification; }
+    public boolean isFrozen() { return transitionStage > 0 || pendingCommitEnter || pendingCommitExit; }
     public int getMinAllowedRow() { return minAllowedRow; }
+    public boolean isNarrowMode() { return narrowMode; }
+    public boolean shouldHideOuterColumns() { return hideOuterDuringTransition; }
+    public boolean shouldShowNarrowLabel() { return showNarrowLabel; }
+    public boolean shouldForceShowOuterColumns() { return forceShowOuterDuringTransition; }
 
     public void newBlock() {
         if (gameOver) return; // 遊戲已結束，不再產生新方塊
@@ -121,6 +144,8 @@ public class GameController {
                 int py = y + i / 4;
                 if (px >= board.getWidth() || py >= board.getHeight() || px < 0 || py < 0)
                     return 0;
+                // 四格寬模式：限制僅能在 x=3..6 的範圍放置
+                if (narrowMode && (px < 3 || px > 6)) return 0;
                 if (board.getCell(px, py) != 0)
                     return 0;
             }
@@ -216,24 +241,51 @@ public class GameController {
     // 空白鍵：硬降，直接落到底並立即鎖定（不套用 lock delay）
     public void hardDrop() {
         if (gameOver) return;
+        if (isFrozen()) return; // 凍結或待提交期間不處理
         if (!hardDropAllowed) return;
         hardDropAllowed = false;
         while (canPlace(x, y + 1, blockType, turnState) == 1) {
             y++;
         }
         setBlock(x, y, blockType, turnState);
-        int cleared = board.clearFullLines();
-        // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
-        if (cleared > 0) {
-            minAllowedRow = Math.min(10, minAllowedRow + cleared);
+        // 放好方塊的當下判定遊戲結束
+        if (isAboveDeathLineOccupied()) {
+            gameOver = true;
+            return;
         }
-                // 新的遊戲結束判定：若盤面有任意方塊位於死亡線以上則結束
-                if (isAboveDeathLineOccupied()) {
-                    gameOver = true;
-                    return;
+        int cleared = narrowMode ? clearFullLinesNarrow() : board.clearFullLines();
+        if (!narrowMode) {
+            // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
+            if (cleared > 0) {
+                int before = minAllowedRow;
+                minAllowedRow = Math.min(10, minAllowedRow + cleared);
+                // 觸發進入四格寬模式
+                if (!narrowMode && before < 10 && minAllowedRow >= 10) {
+                    scheduleEnterNarrowMode();
                 }
-        // Combo：連續有消行則累加，沒消行則設為 0（集中於 Notification）
-        notification.setCombo(cleared > 0 ? notification.getCombo() + 1 : 0);
+            }
+        } else {
+            // 四格寬模式邏輯：第一次消行不算 combo；combo 斷掉時紅線下移 1 格（最多到剩 5 格）
+            if (cleared > 0) {
+                if (!narrowFirstClearOccurred) {
+                    narrowFirstClearOccurred = true; // 第一次消除，不計入 combo
+                } else {
+                    narrowComboCount += 1; // 累加 combo
+                    if (narrowComboCount >= 5) {
+                        scheduleExitNarrowMode();
+                    }
+                }
+            } else {
+                if (narrowFirstClearOccurred) {
+                    minAllowedRow = Math.min(15, minAllowedRow + 1);
+                    narrowFirstClearOccurred = false;
+                    narrowComboCount = 0;
+                }
+            }
+        }
+        // Combo 顯示規則：第二次連消才顯示 x1
+        if (cleared > 0) consecutiveClears++; else consecutiveClears = 0;
+        notification.setCombo(consecutiveClears >= 2 ? (consecutiveClears - 1) : 0);
         // 消除行訊息（1 line, 2 lines, 3 lines, Tetris）
         notification.showLineClear(cleared, 1500);
         // ALL CLEAR：盤面全空時顯示 3 秒
@@ -277,24 +329,78 @@ public class GameController {
     // 計時器集中化預留：之後由 TimerService 或控制器驅動 tick
     public void tick() {
         if (gameOver) return;
+        // 模式切換三階段：2 -> 1 -> 0
+        if (transitionStage > 0) {
+            if (transitionStage == 2) {
+                transitionStage = 1; // 第一個tick：完全不動
+                return;
+            } else if (transitionStage == 1) {
+                // 第二個tick：若是進入窄化，隱藏左右欄；若是退出窄化，顯示左右欄
+                hideOuterDuringTransition = transitionEntering;
+                forceShowOuterDuringTransition = !transitionEntering;
+                pendingCommitEnter = transitionEntering;
+                pendingCommitExit = !transitionEntering;
+                transitionStage = 0; // 下一個tick開始恢復
+                return;
+            }
+        }
+        // 進入第三個tick的開始：提交模式切換
+        if (pendingCommitEnter) {
+            pendingCommitEnter = false;
+            enterNarrowMode();
+            hideOuterDuringTransition = false;
+            showNarrowLabel = true; // 這個tick開始顯示字串與允許動作
+            forceShowOuterDuringTransition = false;
+        }
+        if (pendingCommitExit) {
+            pendingCommitExit = false;
+            exitNarrowMode();
+            showNarrowLabel = false;
+            forceShowOuterDuringTransition = false;
+        }
         // 能下落則下落；不能下落則在該 tick 立即固定
         if (canPlace(x, y + 1, blockType, turnState) == 1) {
             y++;
             return;
         }
         setBlock(x, y, blockType, turnState);
-        int cleared = board.clearFullLines();
-        // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
-        if (cleared > 0) {
-            minAllowedRow = Math.min(10, minAllowedRow + cleared);
+        // 放好方塊的當下判定遊戲結束
+        if (isAboveDeathLineOccupied()) {
+            gameOver = true;
+            return;
         }
-                // 新的遊戲結束判定：若盤面有任意方塊位於死亡線以上則結束
-                if (isAboveDeathLineOccupied()) {
-                    gameOver = true;
-                    return;
+        int cleared = narrowMode ? clearFullLinesNarrow() : board.clearFullLines();
+        if (!narrowMode) {
+            // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
+            if (cleared > 0) {
+                int before = minAllowedRow;
+                minAllowedRow = Math.min(10, minAllowedRow + cleared);
+                if (!narrowMode && before < 10 && minAllowedRow >= 10) {
+                    scheduleEnterNarrowMode();
                 }
-        // Combo：連續有消行則累加，沒消行則設為 0（集中於 Notification）
-        notification.setCombo(cleared > 0 ? notification.getCombo() + 1 : 0);
+            }
+        } else {
+            // 四格寬模式邏輯
+            if (cleared > 0) {
+                if (!narrowFirstClearOccurred) {
+                    narrowFirstClearOccurred = true;
+                } else {
+                    narrowComboCount += 1;
+                    if (narrowComboCount >= 5) {
+                        scheduleExitNarrowMode();
+                    }
+                }
+            } else {
+                if (narrowFirstClearOccurred) {
+                    minAllowedRow = Math.min(15, minAllowedRow + 1);
+                    narrowFirstClearOccurred = false;
+                    narrowComboCount = 0;
+                }
+            }
+        }
+        // Combo 顯示規則：第二次連消才顯示 x1
+        if (cleared > 0) consecutiveClears++; else consecutiveClears = 0;
+        notification.setCombo(consecutiveClears >= 2 ? (consecutiveClears - 1) : 0);
         // 消除行訊息（1 line, 2 lines, 3 lines, Tetris）
         notification.showLineClear(cleared, 1500);
         // ALL CLEAR：盤面全空時顯示 3 秒
@@ -358,13 +464,84 @@ public class GameController {
 
     // 是否有方塊位於死亡線以上（row < minAllowedRow）
     private boolean isAboveDeathLineOccupied() {
+        int minX = narrowMode ? 3 : 0;
+        int maxX = narrowMode ? 6 : board.getWidth() - 1;
         for (int iy = 0; iy < minAllowedRow; iy++) {
-            for (int ix = 0; ix < board.getWidth(); ix++) {
+            for (int ix = minX; ix <= maxX; ix++) {
                 if (board.getCell(ix, iy) != 0) return true;
             }
         }
         return false;
     }
+
+    private void enterNarrowMode() {
+        narrowMode = true;
+        // 備份 10x20 盤面
+        backupMap = new int[board.getWidth()][board.getHeight()];
+        for (int ix = 0; ix < board.getWidth(); ix++) {
+            for (int iy = 0; iy < board.getHeight(); iy++) {
+                backupMap[ix][iy] = board.getCell(ix, iy);
+            }
+        }
+        // 進入極窄模式時 combo 重新計算
+        consecutiveClears = 0;
+        notification.setCombo(0);
+        narrowFirstClearOccurred = false;
+        narrowComboCount = 0;
+        // 先刪除滿四格寬（x=3..6 皆非 0）的列；僅壓縮中間四欄
+        clearFullLinesNarrow();
+    }
+
+    private void exitNarrowMode() {
+        // 恢復為 10x20：左右三欄從備份還原，中間四欄保留目前狀態
+        if (backupMap != null) {
+            for (int iy = 0; iy < board.getHeight(); iy++) {
+                // 左側三欄 0..2
+                for (int ix = 0; ix <= 2; ix++) {
+                    board.setCell(ix, iy, backupMap[ix][iy]);
+                }
+                // 右側三欄 7..9
+                for (int ix = 7; ix < board.getWidth(); ix++) {
+                    board.setCell(ix, iy, backupMap[ix][iy]);
+                }
+            }
+        }
+        narrowMode = false;
+        narrowFirstClearOccurred = false;
+        narrowComboCount = 0;
+        // 紅線回到第 18 格高（minAllowedRow = 2）
+        minAllowedRow = 2;
+        // 清除提示（可保留或清除，這裡保留其他通知不動）
+    }
+
+    // 僅針對中間四欄（x=3..6）判定與清除滿列，並只壓縮中間四欄
+    private int clearFullLinesNarrow() {
+        int cleared = 0;
+        int h = board.getHeight();
+        // 從下往上逐列檢查，遇滿列則清除並上方中間四欄全部下移
+        for (int ry = h - 1; ry >= 0; ry--) {
+            boolean full = true;
+            for (int ix = 3; ix <= 6; ix++) {
+                if (board.getCell(ix, ry) == 0) { full = false; break; }
+            }
+            if (full) {
+                cleared++;
+                // 將 ry 之上的中間四欄下移一格
+                for (int ty = ry; ty > 0; ty--) {
+                    for (int ix = 3; ix <= 6; ix++) {
+                        board.setCell(ix, ty, board.getCell(ix, ty - 1));
+                    }
+                }
+                // 最頂列中間四欄清空
+                for (int ix = 3; ix <= 6; ix++) {
+                    board.setCell(ix, 0, 0);
+                }
+                ry++; // 因下移重新檢查同一行
+            }
+        }
+        return cleared;
+    }
+
 
     public static int canPlace(Board board, int x, int y, int type, int state) {
         int[] rotation = Tetromino.values()[type].rotation(state);
@@ -392,5 +569,24 @@ public class GameController {
 
     public static int clearFullLines(Board board) {
         return board.clearFullLines();
+    }
+
+    private void scheduleEnterNarrowMode() {
+        transitionEntering = true;
+        transitionStage = 2; // 兩個tick凍結
+        hideOuterDuringTransition = false;
+        showNarrowLabel = false;
+        pendingCommitEnter = false;
+        pendingCommitExit = false;
+    }
+
+    private void scheduleExitNarrowMode() {
+        transitionEntering = false;
+        transitionStage = 2;
+        hideOuterDuringTransition = false;
+        forceShowOuterDuringTransition = false; // 第一個tick維持現狀；第二個tick會設為 true
+        showNarrowLabel = false;
+        pendingCommitEnter = false;
+        pendingCommitExit = false;
     }
 }
