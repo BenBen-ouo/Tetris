@@ -34,6 +34,8 @@ public class GameController {
     private boolean hardDropAllowed = true;
     // 遊戲結束狀態（觸發於鎖定後占用到最上兩層中間四格的八格）
     private boolean gameOver = false;
+    // 動態死亡線：僅允許死亡線以下的行可放方塊（0-based）。初始為 2（僅允許以下 18 行）。
+    private int minAllowedRow = 2;
 
     public GameController(Board board) {
         this.board = board;
@@ -65,6 +67,7 @@ public class GameController {
     public int getFlag() { return flag; }
     public int getChange() { return change; }
     public Notification getNotification() { return notification; }
+    public int getMinAllowedRow() { return minAllowedRow; }
 
     public void newBlock() {
         if (gameOver) return; // 遊戲已結束，不再產生新方塊
@@ -219,12 +222,16 @@ public class GameController {
             y++;
         }
         setBlock(x, y, blockType, turnState);
-        // 鎖定後先檢查最上兩層中間四格是否有被占用，若有則結束遊戲
-        if (isTopCenterOccupied()) {
-            gameOver = true;
-            return;
-        }
         int cleared = board.clearFullLines();
+        // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
+        if (cleared > 0) {
+            minAllowedRow = Math.min(10, minAllowedRow + cleared);
+        }
+                // 新的遊戲結束判定：若盤面有任意方塊位於死亡線以上則結束
+                if (isAboveDeathLineOccupied()) {
+                    gameOver = true;
+                    return;
+                }
         // Combo：連續有消行則累加，沒消行則設為 0（集中於 Notification）
         notification.setCombo(cleared > 0 ? notification.getCombo() + 1 : 0);
         // 消除行訊息（1 line, 2 lines, 3 lines, Tetris）
@@ -276,12 +283,16 @@ public class GameController {
             return;
         }
         setBlock(x, y, blockType, turnState);
-        // 鎖定後先檢查最上兩層中間四格是否有被占用，若有則結束遊戲
-        if (isTopCenterOccupied()) {
-            gameOver = true;
-            return;
-        }
         int cleared = board.clearFullLines();
+        // 依清行數下移死亡線（累計），最多移動到中間高度（下方剩十格）
+        if (cleared > 0) {
+            minAllowedRow = Math.min(10, minAllowedRow + cleared);
+        }
+                // 新的遊戲結束判定：若盤面有任意方塊位於死亡線以上則結束
+                if (isAboveDeathLineOccupied()) {
+                    gameOver = true;
+                    return;
+                }
         // Combo：連續有消行則累加，沒消行則設為 0（集中於 Notification）
         notification.setCombo(cleared > 0 ? notification.getCombo() + 1 : 0);
         // 消除行訊息（1 line, 2 lines, 3 lines, Tetris）
@@ -345,11 +356,11 @@ public class GameController {
         return true;
     }
 
-    // 檢查最上兩層（y=0,1）中間四格寬（x=3,4,5,6）是否有任何占用
-    private boolean isTopCenterOccupied() {
-        for (int py = 0; py <= 1; py++) {
-            for (int px = 3; px <= 6; px++) {
-                if (board.getCell(px, py) != 0) return true;
+    // 是否有方塊位於死亡線以上（row < minAllowedRow）
+    private boolean isAboveDeathLineOccupied() {
+        for (int iy = 0; iy < minAllowedRow; iy++) {
+            for (int ix = 0; ix < board.getWidth(); ix++) {
+                if (board.getCell(ix, iy) != 0) return true;
             }
         }
         return false;
