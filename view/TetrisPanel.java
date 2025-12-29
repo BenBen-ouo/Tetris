@@ -239,10 +239,17 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         g2d.drawImage(controlsImage, offsetX + 500, offsetY + 570, 368, 110, this);
         g2d.setComposite(oldComposite);
 
-        // 注意：面板內畫面寬度控制由 controller 的 isNarrowMode 與 shouldHideOuterColumns 共同決定
+        // 注意：面板內畫面寬度控制
+        // - 進入窄化過渡：可分別隱藏左/右三欄
+        // - 已在窄化：除非強制顯示外側，否則隱藏左右三欄
         for(int i = 0; i < 10; i++) {
-            boolean hideSidesNow = ((controller.isNarrowMode() && !controller.shouldForceShowOuterColumns()) || controller.shouldHideOuterColumns());
-            if (hideSidesNow && (i < 3 || i > 6)) continue; // 窄化或過渡時不渲染外側
+            boolean forceShow = controller.shouldForceShowOuterColumns();
+            boolean hideLeft = controller.shouldHideLeftColumns();
+            boolean hideRight = controller.shouldHideRightColumns();
+            boolean narrowHide = (controller.isNarrowMode() && !forceShow);
+            boolean hideOuterBoth = controller.shouldHideOuterColumns() && !forceShow; // 用於退出過渡第二個 tick
+            boolean hideNow = (narrowHide && (i < 3 || i > 6)) || (hideLeft && i < 3) || (hideRight && i > 6) || (hideOuterBoth && (i < 3 || i > 6));
+            if (hideNow) continue; // 不渲染被隱藏欄位
             for(int j = 0; j < 20; j++) {
                 if(map[i][j] == 0) {
                     if((i+j)%2 == 0)
@@ -256,15 +263,16 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
         // 畫出紅色死亡線：位於第 (minAllowedRow-1) 與 minAllowedRow 之間的中線
         int minRow = controller.getMinAllowedRow(); // 0-based；初始為 2（只允許以下18行）
         int boardLeftX = 150 + offsetX + 3;
-            int fullRightX = (9 * 33 + 3 + 150 + offsetX) + 30; // 全寬最右緣
-            int boardWidth = fullRightX - boardLeftX;
-            int redLeftX = boardLeftX;
-            int redWidth = boardWidth;
-            boolean hideSides = (controller.isNarrowMode() && !controller.shouldForceShowOuterColumns()) || controller.shouldHideOuterColumns();
-            if (hideSides) {
-                redLeftX = boardLeftX + 3 * 33;
-                redWidth = 4 * 33 - 3;
-            }
+        // 計算目前可見欄位範圍
+        boolean forceShow = controller.shouldForceShowOuterColumns();
+        boolean outerHiddenByExitTick = controller.shouldHideOuterColumns() && !forceShow;
+        boolean sideHiddenLeft = (controller.isNarrowMode() && !forceShow) || controller.shouldHideLeftColumns() || outerHiddenByExitTick;
+        boolean sideHiddenRight = (controller.isNarrowMode() && !forceShow) || controller.shouldHideRightColumns() || outerHiddenByExitTick;
+        int hiddenLeftCols = sideHiddenLeft ? 3 : 0;
+        int hiddenRightCols = sideHiddenRight ? 3 : 0;
+        int visibleCols = 10 - hiddenLeftCols - hiddenRightCols;
+        int redLeftX = boardLeftX + hiddenLeftCols * 33;
+        int redWidth = visibleCols * 33 - 3;
         int topYOfMinRow = minRow * 33 + 17 + offsetY; // 第 minRow 行的頂端像素
         int yLine = topYOfMinRow - 16; // 與上一行的中線（約略半格）
         g2d.setColor(new Color(220, 30, 30));
@@ -316,12 +324,18 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             g2d.setFont(new Font("SansSerif", Font.BOLD, 40));
             g2d.drawString(spinText, offsetX + 15, baseTextY);
         }
-        // 在字的下方留間隔顯示 Combo
+        // Combo 顯示在畫面正中間
         int combo = controller.getCombo();
         if (combo > 0) {
             g2d.setColor(new Color(255, 230, 120));
-            g2d.setFont(new Font("SansSerif", Font.BOLD, 28));
-            g2d.drawString("Combo x" + combo, offsetX, baseTextY + 60);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 48));
+            String comboText = "Combo x" + combo;
+            FontMetrics cfm = g2d.getFontMetrics();
+            int tw = cfm.stringWidth(comboText);
+            int th = cfm.getAscent();
+            int cx = (getWidth() - tw) / 2;
+            int cy = (getHeight() + th) / 2 - 50;
+            g2d.drawString(comboText, cx, cy);
         }
         // 顯示消除行訊息（1/2/3 lines 或 Tetris）
         String lcText = controller.getLineClearText();
@@ -330,15 +344,40 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             g2d.setFont(new Font("SansSerif", Font.BOLD, 36));
             g2d.drawString(lcText, offsetX + 15, baseTextY + 120);
         }
-        // 四格寬模式提示（左下角）
+        // 進入窄化時的提示字串
+        // Step 5: 中央顯示 Change mode !
+        if (controller.shouldShowChangeModeLabel()) {
+            g2d.setColor(new Color(255, 120, 120));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 50));
+            String txt = "Change mode !";
+            FontMetrics fm = g2d.getFontMetrics();
+            int tw = fm.stringWidth(txt);
+            int th = fm.getAscent();
+            int cx = (getWidth() - tw) / 2;
+            int cy = (getHeight() + th) / 2;
+            g2d.drawString(txt, cx, cy);
+        }
+        // 進入窄化 Step 1：中央偏上顯示 Try combo x5
         if (controller.isNarrowMode() && controller.shouldShowNarrowLabel()) {
-            g2d.setColor(new Color(255, 100, 100));
-            g2d.setFont(new Font("SansSerif", Font.BOLD, 36));
-            int labelY = offsetY + 20 * 33 - 150;
-            g2d.drawString("Narrow Mode", offsetX, labelY);
             g2d.setColor(new Color(255, 220, 120));
-            g2d.setFont(new Font("SansSerif", Font.BOLD, 30));
-            g2d.drawString("Try combo x5", offsetX + 20, labelY + 35);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 44));
+            String txt = "Try combo x5";
+            FontMetrics fm = g2d.getFontMetrics();
+            int tw = fm.stringWidth(txt);
+            int cx = (getWidth() - tw) / 2;
+            int cy = (int)(getHeight() * 0.25);
+            g2d.drawString(txt, cx, cy);
+        }
+        // 退出窄化 Step 2：中央偏上顯示 Try Tetris !
+        if (controller.shouldShowTryTetrisLabel()) {
+            g2d.setColor(new Color(255, 120, 120));
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 44));
+            String txt = "Try Tetris !";
+            FontMetrics fm = g2d.getFontMetrics();
+            int tw = fm.stringWidth(txt);
+            int cx = (getWidth() - tw) / 2;
+            int cy = (int)(getHeight() * 0.25);
+            g2d.drawString(txt, cx, cy);
         }
 
         long elapsed = System.currentTimeMillis() - startTime;

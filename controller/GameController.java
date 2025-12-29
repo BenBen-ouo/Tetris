@@ -51,6 +51,25 @@ public class GameController {
     private boolean forceShowOuterDuringTransition = false; // 退出窄化第二個tick顯示左右欄
     private boolean pendingCommitEnter = false;
     private boolean pendingCommitExit = false;
+    // 進入窄化的全新 5 階段過渡：
+    // 5: 顯示 Change mode !（凍結）
+    // 4: 隱藏左三欄（凍結）
+    // 3: 隱藏右三欄（凍結）
+    // 2: 正式提交窄化並執行四欄消行（凍結）
+    // 1: 顯示 Try combo x5（凍結）
+    // 0: 過渡結束，允許操作
+    private int enterSteps = 0;
+    private boolean hideLeftDuringTransition = false;
+    private boolean hideRightDuringTransition = false;
+    private boolean showChangeModeLabel = false;
+    // 退出窄化的 5 階段過渡（與進入對稱）：
+    // 5: 顯示 Change mode !（凍結）
+    // 4: 回復左三欄（讀取備份並顯示；凍結）
+    // 3: 回復右三欄（讀取備份並顯示；凍結）
+    // 2: 顯示 Try Tetris !（偏上）且紅線上移（凍結）
+    // 1: 正式提交退出窄化（仍凍結）；0: 結束過渡、允許操作
+    private int exitSteps = 0;
+    private boolean showTryTetrisLabel = false;
 
     public GameController(Board board) {
         this.board = board;
@@ -85,12 +104,16 @@ public class GameController {
     public int getFlag() { return flag; }
     public int getChange() { return change; }
     public Notification getNotification() { return notification; }
-    public boolean isFrozen() { return transitionStage > 0 || pendingCommitEnter || pendingCommitExit; }
+    public boolean isFrozen() { return enterSteps > 0 || exitSteps > 0 || transitionStage > 0 || pendingCommitEnter || pendingCommitExit; }
     public int getMinAllowedRow() { return minAllowedRow; }
     public boolean isNarrowMode() { return narrowMode; }
     public boolean shouldHideOuterColumns() { return hideOuterDuringTransition; }
+    public boolean shouldHideLeftColumns() { return hideLeftDuringTransition; }
+    public boolean shouldHideRightColumns() { return hideRightDuringTransition; }
     public boolean shouldShowNarrowLabel() { return showNarrowLabel; }
     public boolean shouldForceShowOuterColumns() { return forceShowOuterDuringTransition; }
+    public boolean shouldShowChangeModeLabel() { return showChangeModeLabel; }
+    public boolean shouldShowTryTetrisLabel() { return showTryTetrisLabel; }
 
     public void newBlock() {
         if (gameOver) return; // 遊戲已結束，不再產生新方塊
@@ -339,6 +362,94 @@ public class GameController {
     // 計時器集中化預留：之後由 TimerService 或控制器驅動 tick
     public void tick() {
         if (gameOver) return;
+        // 先處理「進入窄化」的 5 階段過渡（完全凍結操作）
+        if (enterSteps > 0) {
+            if (enterSteps == 5) {
+                // 顯示 Change mode !
+                showChangeModeLabel = true;
+                hideLeftDuringTransition = false;
+                hideRightDuringTransition = false;
+                enterSteps = 4;
+                return;
+            } else if (enterSteps == 4) {
+                // 隱藏左三欄
+                showChangeModeLabel = false;
+                hideLeftDuringTransition = true;
+                hideRightDuringTransition = false;
+                enterSteps = 3;
+                return;
+            } else if (enterSteps == 3) {
+                // 隱藏右三欄（此時左右皆隱藏）
+                hideLeftDuringTransition = true;
+                hideRightDuringTransition = true;
+                enterSteps = 2;
+                return;
+            } else if (enterSteps == 2) {
+                // 正式提交窄化並執行四欄消行
+                enterNarrowMode();
+                // 進入窄化後維持左右隱藏
+                hideLeftDuringTransition = true;
+                hideRightDuringTransition = true;
+                showNarrowLabel = false; // 下一步才顯示 Try combo x5
+                enterSteps = 1;
+                return;
+            } else if (enterSteps == 1) {
+                // 顯示 Try combo x5（仍凍結）
+                showNarrowLabel = true;
+                enterSteps = 0; // 下一個 tick 才解除凍結
+                return;
+            }
+        }
+
+        // 退出窄化的 5 階段過渡（完全凍結操作）
+        if (exitSteps > 0) {
+            if (exitSteps == 5) {
+                // 顯示 Change mode !
+                showChangeModeLabel = true;
+                showTryTetrisLabel = false;
+                // 初始維持窄化隱藏左右
+                forceShowOuterDuringTransition = false;
+                hideLeftDuringTransition = false;
+                hideRightDuringTransition = false;
+                exitSteps = 4;
+                return;
+            } else if (exitSteps == 4) {
+                // 回復左三欄（從備份寫回並顯示左側）
+                showChangeModeLabel = false;
+                restoreLeftColumnsFromBackup();
+                forceShowOuterDuringTransition = true; // 允許顯示外側
+                hideLeftDuringTransition = false;       // 顯示左側
+                hideRightDuringTransition = true;       // 仍隱藏右側
+                exitSteps = 3;
+                return;
+            } else if (exitSteps == 3) {
+                // 回復右三欄（從備份寫回並顯示右側）
+                restoreRightColumnsFromBackup();
+                forceShowOuterDuringTransition = true;
+                hideLeftDuringTransition = false;
+                hideRightDuringTransition = false; // 左右都顯示
+                exitSteps = 2;
+                return;
+            } else if (exitSteps == 2) {
+                // 顯示 Try Tetris !，紅線往上移（回到普通模式高度）
+                showTryTetrisLabel = true;
+                minAllowedRow = 2; // 紅線回到第 18 格高
+                forceShowOuterDuringTransition = true;
+                hideLeftDuringTransition = false;
+                hideRightDuringTransition = false;
+                exitSteps = 1;
+                return;
+            } else if (exitSteps == 1) {
+                // 正式退出窄化（提交），下一個 tick 才解除凍結
+                exitNarrowMode();
+                showTryTetrisLabel = false; // 提示只在上一個步驟顯示
+                forceShowOuterDuringTransition = false; // 恢復一般顯示規則
+                exitSteps = 0;
+                return;
+            }
+        }
+
+        // 既有的進/出窄化兩階段（僅保留給舊的退出流程使用；現已由 exitSteps 取代）
         // 模式切換三階段：2 -> 1 -> 0
         if (transitionStage > 0) {
             if (transitionStage == 2) {
@@ -354,7 +465,7 @@ public class GameController {
                 return;
             }
         }
-        // 進入第三個tick的開始：提交模式切換
+        // 進入第三個tick的開始：提交模式切換（僅退出窄化時使用）
         if (pendingCommitEnter) {
             pendingCommitEnter = false;
             enterNarrowMode();
@@ -531,7 +642,28 @@ public class GameController {
         narrowComboCount = 0;
         // 紅線回到第 18 格高（minAllowedRow = 2）
         minAllowedRow = 2;
+        // 進入普通模式時 combo 重新計算
+        consecutiveClears = 0;
+        notification.setCombo(0);
         // 清除提示（可保留或清除，這裡保留其他通知不動）
+    }
+
+    private void restoreLeftColumnsFromBackup() {
+        if (backupMap == null) return;
+        for (int iy = 0; iy < board.getHeight(); iy++) {
+            for (int ix = 0; ix <= 2; ix++) {
+                board.setCell(ix, iy, backupMap[ix][iy]);
+            }
+        }
+    }
+
+    private void restoreRightColumnsFromBackup() {
+        if (backupMap == null) return;
+        for (int iy = 0; iy < board.getHeight(); iy++) {
+            for (int ix = 7; ix < board.getWidth(); ix++) {
+                board.setCell(ix, iy, backupMap[ix][iy]);
+            }
+        }
     }
 
     // 僅針對中間四欄（x=3..6）判定與清除滿列，並只壓縮中間四欄
@@ -592,19 +724,29 @@ public class GameController {
     }
 
     private void scheduleEnterNarrowMode() {
+        // 啟動 5 階段過渡
         transitionEntering = true;
-        transitionStage = 2; // 兩個tick凍結
-        hideOuterDuringTransition = false;
+        enterSteps = 5;
+        // 重置過渡顯示旗標
+        showChangeModeLabel = true;
+        hideLeftDuringTransition = false;
+        hideRightDuringTransition = false;
+        hideOuterDuringTransition = false; // 舊旗標僅供退出流程使用
         showNarrowLabel = false;
         pendingCommitEnter = false;
         pendingCommitExit = false;
     }
 
     private void scheduleExitNarrowMode() {
+        // 啟動 5 階段退出過渡
         transitionEntering = false;
-        transitionStage = 2;
+        exitSteps = 5;
+        showChangeModeLabel = true;
+        showTryTetrisLabel = false;
+        hideLeftDuringTransition = false;
+        hideRightDuringTransition = false;
         hideOuterDuringTransition = false;
-        forceShowOuterDuringTransition = false; // 第一個tick維持現狀；第二個tick會設為 true
+        forceShowOuterDuringTransition = false;
         showNarrowLabel = false;
         pendingCommitEnter = false;
         pendingCommitExit = false;
