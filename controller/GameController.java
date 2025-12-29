@@ -263,6 +263,11 @@ public class GameController {
                 if (!narrowMode && before < 10 && minAllowedRow >= 10) {
                     scheduleEnterNarrowMode();
                 }
+                // 判定線往下移動後，立即判斷是否遊戲結束
+                if (minAllowedRow > before && isAboveDeathLineOccupied()) {
+                    gameOver = true;
+                    return;
+                }
             }
         } else {
             // 四格寬模式邏輯：第一次消行不算 combo；combo 斷掉時紅線下移 1 格（最多到剩 5 格）
@@ -280,6 +285,11 @@ public class GameController {
                     minAllowedRow = Math.min(15, minAllowedRow + 1);
                     narrowFirstClearOccurred = false;
                     narrowComboCount = 0;
+                    // 判定線往下移動後，立即判斷是否遊戲結束
+                    if (isAboveDeathLineOccupied()) {
+                        gameOver = true;
+                        return;
+                    }
                 }
             }
         }
@@ -378,6 +388,11 @@ public class GameController {
                 if (!narrowMode && before < 10 && minAllowedRow >= 10) {
                     scheduleEnterNarrowMode();
                 }
+                // 判定線往下移動後，立即判斷是否遊戲結束
+                if (minAllowedRow > before && isAboveDeathLineOccupied()) {
+                    gameOver = true;
+                    return;
+                }
             }
         } else {
             // 四格寬模式邏輯
@@ -395,6 +410,11 @@ public class GameController {
                     minAllowedRow = Math.min(15, minAllowedRow + 1);
                     narrowFirstClearOccurred = false;
                     narrowComboCount = 0;
+                    // 判定線往下移動後，立即判斷是否遊戲結束
+                    if (isAboveDeathLineOccupied()) {
+                        gameOver = true;
+                        return;
+                    }
                 }
             }
         }
