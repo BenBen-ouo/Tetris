@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import model.Board;
+import model.Notification;
 import model.PieceGenerator;
 import model.SRSSystem;
 import model.Tetromino;
@@ -24,16 +25,11 @@ public class GameController {
     private int flag = 0;    // 與舊程式相容（0:飄落中, 1:已固定）
     // Lock Delay：現階段設定為 0，且不再於流程中使用（僅保留欄位）
     private int lockDelayTicks = 0;
-    // Spin/Combo 顯示：SRS 使用第幾次嘗試（1-based，0 表示未用踢牆）、是否符合 T-Spin、最近一次鎖定顯示、到期時間、Combo 次數
+    // 旋轉/通知相關：踢牆次序與 T-Spin 判定，集中由 Notification 顯示
     private int kickIndexUsed = 0;
     private boolean currentTSpin = false;
-    private String lastSpinText = "";
-    private long lastSpinUntilMs = 0L;
-    private int combo = -1;
-    // 旋轉完成後是否無法再下落（作為 spin 顯示條件之一）
     private boolean cannotDropAfterRotate = false;
-    // ALL CLEAR 顯示：到期時間 TTL（毫秒），在面板中央顯示 3 秒
-    private long lastAllClearUntilMs = 0L;
+    private final Notification notification = new Notification();
     // 每塊方塊僅允許一次硬降
     private boolean hardDropAllowed = true;
     // 遊戲結束狀態（觸發於鎖定後占用到最上兩層中間四格的八格）
@@ -68,6 +64,7 @@ public class GameController {
     public List<Integer> getNextQueue() { return new ArrayList<>(nextQueue); }
     public int getFlag() { return flag; }
     public int getChange() { return change; }
+    public Notification getNotification() { return notification; }
 
     public void newBlock() {
         if (gameOver) return; // 遊戲已結束，不再產生新方塊
@@ -228,22 +225,21 @@ public class GameController {
             return;
         }
         int cleared = board.clearFullLines();
-        // Combo：連續有消行則累加，沒消行則設為-1
-        combo = (cleared > 0) ? (combo + 1) : -1;
+        // Combo：連續有消行則累加，沒消行則設為 0（集中於 Notification）
+        notification.setCombo(cleared > 0 ? notification.getCombo() + 1 : 0);
+        // 消除行訊息（1 line, 2 lines, 3 lines, Tetris）
+        notification.showLineClear(cleared, 1500);
         // ALL CLEAR：盤面全空時顯示 3 秒
         if (isBoardEmpty()) {
-            lastAllClearUntilMs = System.currentTimeMillis() + 3000;
-        } else if (lastAllClearUntilMs != 0L && System.currentTimeMillis() > lastAllClearUntilMs) {
-            lastAllClearUntilMs = 0L;
+            notification.showAllClear(3000);
         }
         // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin，且排除 O
         if (blockType != Tetromino.O.ordinal() && ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin)) {
             String name = Tetromino.values()[blockType].name();
-            lastSpinText = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
-            lastSpinUntilMs = System.currentTimeMillis() + 3000;
+            String text = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
+            notification.showSpin(text, 3000);
         } else {
-            lastSpinText = "";
-            lastSpinUntilMs = 0L;
+            notification.clearSpin();
         }
         newBlock();
     }
@@ -286,35 +282,36 @@ public class GameController {
             return;
         }
         int cleared = board.clearFullLines();
-        // Combo：連續有消行則累加，沒消行則設為-1
-        combo = (cleared > 0) ? (combo + 1) : -1;
+        // Combo：連續有消行則累加，沒消行則設為 0（集中於 Notification）
+        notification.setCombo(cleared > 0 ? notification.getCombo() + 1 : 0);
+        // 消除行訊息（1 line, 2 lines, 3 lines, Tetris）
+        notification.showLineClear(cleared, 1500);
         // ALL CLEAR：盤面全空時顯示 3 秒
         if (isBoardEmpty()) {
-            lastAllClearUntilMs = System.currentTimeMillis() + 3000;
-        } else if (lastAllClearUntilMs != 0L && System.currentTimeMillis() > lastAllClearUntilMs) {
-            lastAllClearUntilMs = 0L;
+            notification.showAllClear(3000);
         }
         // Spin 顯示：僅當 (踢牆使用第 3 次以上且旋轉後無法下落) 或 T-Spin，且排除 O
         if (blockType != Tetromino.O.ordinal() && ((kickIndexUsed >= 3 && cannotDropAfterRotate) || currentTSpin)) {
             String name = Tetromino.values()[blockType].name();
-            lastSpinText = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
-            lastSpinUntilMs = System.currentTimeMillis() + 3000;
+            String text = (blockType == Tetromino.T.ordinal()) ? "T spin" : (name + " spin");
+            notification.showSpin(text, 3000);
         } else {
-            lastSpinText = "";
-            lastSpinUntilMs = 0L;
+            notification.clearSpin();
         }
         newBlock();
     }
     public String getLastSpinText() {
-        if (lastSpinUntilMs == 0L) return "";
-        return (System.currentTimeMillis() <= lastSpinUntilMs) ? lastSpinText : "";
+        return notification.getSpinText();
     }
 
-    public int getCombo() { return combo; }
+    public int getCombo() { return notification.getCombo(); }
 
     public String getAllClearText() {
-        if (lastAllClearUntilMs == 0L) return "";
-        return (System.currentTimeMillis() <= lastAllClearUntilMs) ? "ALL CLEAR" : "";
+        return notification.getAllClearText();
+    }
+
+    public String getLineClearText() {
+        return notification.getLineClearText();
     }
 
     public boolean isGameOver() { return gameOver; }
