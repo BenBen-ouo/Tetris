@@ -424,24 +424,8 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
                         syncStateFromController();
                         repaint();
                     }
-                    // 只有在還沒結束時才執行
-//                     if (!isGameOver()) {
-//                         while(down_shift() == 1); 
-//                         // 強制同步狀態
-//                         syncStateFromController();
-//                         repaint();
-//                         // 關鍵：如果這一下 Space 導致遊戲結束，立刻通知主程式
-//                         if (isGameOver()) {
-//                             Tetris frame = (Tetris) SwingUtilities.getWindowAncestor(this);
-//                             if (frame != null) {
-//                     // 停止面板內的任何倒數計時（如果有）
-//                                 // 並呼叫結束處理
-//                                 frame.triggerGameOverManually(); 
-//                             }
-//                         }
-//                     }
                     break;
-                case KeyEvent.VK_SHIFT: 
+                case KeyEvent.VK_C: 
                     controller.holdSwap();
                     syncStateFromController();
                     repaint();
