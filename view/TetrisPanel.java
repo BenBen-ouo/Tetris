@@ -334,15 +334,15 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             int tw = cfm.stringWidth(comboText);
             int th = cfm.getAscent();
             int cx = (getWidth() - tw) / 2;
-            int cy = (getHeight() + th) / 2 - 50;
+            int cy = (getHeight() + th) / 2 - 100;
             g2d.drawString(comboText, cx, cy);
         }
         // 顯示消除行訊息（1/2/3 lines 或 Tetris）
         String lcText = controller.getLineClearText();
         if (lcText != null && !lcText.isEmpty()) {
             g2d.setColor(new Color(120, 220, 255));
-            g2d.setFont(new Font("SansSerif", Font.BOLD, 36));
-            g2d.drawString(lcText, offsetX + 15, baseTextY + 120);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 40));
+            g2d.drawString(lcText, offsetX, baseTextY + 120);
         }
         // 進入窄化時的提示字串
         // Step 5: 中央顯示 Change mode !
@@ -428,7 +428,7 @@ public final class TetrisPanel extends JPanel implements KeyListener { //面板�
             int tw = fm.stringWidth(acText);
             int th = fm.getAscent();
             int cx = (getWidth() - tw) / 2;
-            int cy = (getHeight() + th) / 2 - 40;
+            int cy = (getHeight() + th) / 2;
             g2d.drawString(acText, cx, cy);
         }
     }
